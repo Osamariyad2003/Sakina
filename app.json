@@ -1,17 +1,20 @@
 {
   "expo": {
     "name": "Sakina",
-    "slug": "Sakina",
+    "slug": "sakina",
+    "scheme": "sakina",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sakina.app"
     },
     "android": {
+      "package": "com.sakina.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F5F1EA",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +23,34 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Thmanyah-Sans-Regular.otf",
+            "./assets/fonts/Thmanyah-Sans-Medium.otf",
+            "./assets/fonts/Thmanyah-Sans-Bold.otf",
+            "./assets/fonts/Thmanyah-SerifDisplay-Regular.otf",
+            "./assets/fonts/Thmanyah-SerifText-Regular.otf"
+          ]
+        }
+      ],
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F5F1EA",
+          "dark": {
+            "backgroundColor": "#1B1E1C"
+          }
+        }
+      ]
+    ]
   }
 }

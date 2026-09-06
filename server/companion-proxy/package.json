@@ -1,0 +1,16 @@
+{
+  "name": "sakina-companion-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend proxy that lets the Sakina app call Claude without ever embedding the Anthropic API key in the mobile bundle.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  }
+}
