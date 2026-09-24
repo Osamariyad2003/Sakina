@@ -3,12 +3,12 @@ import { View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
-import { Screen, AppText, Card, Avatar, Badge, Button, LoadingState, ErrorState } from '../../../ui/primitives';
+import { Screen, AppText, Card, Avatar, Badge, Button, LoadingState, ErrorState, resolveImageUri } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { useProfessionalQuery } from '../state/useProfessionalQueries';
 import { getSpecialty, sessionModeMeta } from '../models/professionalContent';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TherapistDetail'>;
 
@@ -28,7 +28,7 @@ export function TherapistDetailScreen({ navigation, route }: Props) {
   if (query.isError || !query.data) {
     return (
       <Screen>
-        <ErrorState message={(query.error as AppError)?.message ?? t('professionals.notFound')} onRetry={() => query.refetch()} />
+        <ErrorState message={errorText(query.error, t) ?? t('professionals.notFound')} onRetry={() => query.refetch()} />
       </Screen>
     );
   }
@@ -42,7 +42,7 @@ export function TherapistDetailScreen({ navigation, route }: Props) {
     <Screen edges={['top']} padded={false}>
       <ScrollView contentContainerStyle={{ padding: theme.spacing.md, gap: theme.spacing.md }}>
         <View style={{ alignItems: 'center', gap: theme.spacing.xs }}>
-          <Avatar uri={professional.photoUrl} initials={professional.fullName} size={88} />
+          <Avatar uri={resolveImageUri(professional.image)} initials={professional.fullName} size={88} />
           <AppText variant="displayMd" style={{ textAlign: 'center' }}>
             {professional.fullName}
           </AppText>

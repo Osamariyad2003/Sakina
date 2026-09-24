@@ -14,8 +14,8 @@ import {
   useClearRecentSearchesMutation,
 } from '../state/useSearchQueries';
 import { MIN_QUERY_LENGTH, type SearchResult, type SearchScope } from '../models/searchContent';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList, AppTabsParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<HomeStackParamList, 'Search'>,
@@ -117,7 +117,7 @@ export function SearchScreen({ navigation, route }: Props) {
         ) : searchQuery.isLoading ? (
           <SkeletonList rows={4} />
         ) : searchQuery.isError ? (
-          <ErrorState message={(searchQuery.error as AppError).message} onRetry={() => searchQuery.refetch()} />
+          <ErrorState message={errorText(searchQuery.error, t)} onRetry={() => searchQuery.refetch()} />
         ) : results.length === 0 ? (
           <EmptyState title={t('search.noResultsTitle')} description={t('search.noResultsBody', { query: query.trim() })} />
         ) : (

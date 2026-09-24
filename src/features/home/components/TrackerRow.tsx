@@ -34,8 +34,19 @@ export function TrackerRow({ signal }: TrackerRowProps) {
 
   return (
     <Card style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-      <Ionicons name={meta.icon} size={22} color={accentColor} />
-      <View style={{ flex: 1 }}>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: theme.radius.pill,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background.primary,
+        }}
+      >
+        <Ionicons name={meta.icon} size={20} color={accentColor} />
+      </View>
+      <View style={{ flexShrink: 1 }}>
         <AppText variant="label">{t(`home.tracker.${signal.key}Label`)}</AppText>
         <AppText variant="caption" color={theme.colors.text.secondary}>
           {t(`home.tracker.${signal.key}Value`, { count: signal.value })}

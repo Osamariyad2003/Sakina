@@ -1,152 +1,134 @@
-import { storage, storageKeys } from '../../../core/storage/mmkv';
-import { AppError } from '../../../core/errors';
-import { config } from '../../../config';
-import i18n from '../../../i18n';
+import { AppError } from '../../../core/errors/AppError';
 import {
-  therapistCatalog,
-  filterProfessionals,
   buildDaySlots,
-  getProfessional,
-  DEFAULT_SESSION_MINUTES,
-  type DirectoryFilter,
+  filterProfessionals,
   type AvailabilitySlot,
+  type DirectoryFilter,
 } from '../models/professionalContent';
-import type { Appointment, Professional, SessionMode } from '../../../types/models';
+import { hasClashingAppointment, markTakenSlots } from '../models/availability';
+import type { Appointment, Professional } from '../../../types/models';
+import type { AppointmentRepository, BookingInput, ProfessionalDirectory } from './professionalRepository';
 
 /**
- * [ASSUMPTION] No booking backend exists (product-definition.md Open
- * Question #2/#7) — the directory is a static catalogue and appointments
- * persist to MMKV, the same mock pattern as journal/mood/sleep. Nothing
- * here takes payment: `book()` records an intent to meet and returns a
- * `pending` appointment, because only a real provider can confirm one.
- * The exported signatures are the contract the screens depend on; swap the
- * bodies for `apiClient` calls once a backend exists.
+ * Professional-help use cases over `ProfessionalDirectory` and
+ * `AppointmentRepository`.
+ *
+ * Three things moved out of here (docs/architecture-review.md §2.3, §6.1, §6.5):
+ * - transport/persistence → `httpProfessionalRepository` / `localProfessionalRepository`;
+ * - the availability rule → `models/availability.ts`, where it is written once
+ *   instead of once per branch;
+ * - i18n → the presentation layer. Errors now carry a `messageKey` and screens
+ *   render them with `errorText(error, t)`. A module that does not render
+ *   cannot know the user's language, and importing i18n here also dragged
+ *   React Native into every test that touched this file.
+ *
+ * `search` needs to know which language's specialty labels to match, so the
+ * caller passes `isArabic` explicitly rather than this module reading it from
+ * a global.
  */
 
-function fakeDelay(ms = 300) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+let directory: ProfessionalDirectory | null = null;
+let appointments: AppointmentRepository | null = null;
+
+/** Wires implementations. Returns a restore function, so tests can undo it. */
+export function setProfessionalRepositories(next: {
+  directory: ProfessionalDirectory;
+  appointments: AppointmentRepository;
+}): () => void {
+  const previous = { directory, appointments };
+  directory = next.directory;
+  appointments = next.appointments;
+  return () => {
+    directory = previous.directory;
+    appointments = previous.appointments;
+  };
 }
 
-function readAppointments(): Appointment[] {
-  return storage.getJSON<Appointment[]>(storageKeys.mockAppointments) ?? [];
+function activeDirectory(): ProfessionalDirectory {
+  if (!directory) throw new Error('Professional directory has not been wired — call composeRepositories().');
+  return directory;
 }
 
-function writeAppointments(appointments: Appointment[]) {
-  storage.setJSON(storageKeys.mockAppointments, appointments);
+function activeAppointments(): AppointmentRepository {
+  if (!appointments) throw new Error('Appointment repository has not been wired — call composeRepositories().');
+  return appointments;
 }
 
-async function listProfessionals(filter: DirectoryFilter = {}): Promise<Professional[]> {
-  await fakeDelay();
-  const isArabic = i18n.language !== 'en';
-  return filterProfessionals(therapistCatalog, filter, isArabic);
+async function listProfessionals(filter: DirectoryFilter = {}, isArabic = true): Promise<Professional[]> {
+  return filterProfessionals(await activeDirectory().list(), filter, isArabic);
 }
 
 async function getProfessionalById(id: string): Promise<Professional> {
-  await fakeDelay(150);
-  const professional = getProfessional(id);
-  if (!professional) {
-    throw new AppError(i18n.t('professionals.notFound'), 'unknown', 404);
-  }
+  const professional = await activeDirectory().findById(id);
+  if (!professional) throw AppError.withKey('professionals.notFound', 'unknown', 404);
   return professional;
 }
 
 /**
- * Slots for one day, with anything the user has already booked marked
- * unavailable so the same slot can't be double-booked locally.
+ * Slots for one day, with the times this user already holds marked
+ * unavailable. See `models/availability.ts` for what this can and cannot know.
  */
 async function getAvailability(professionalId: string, isoDate: string): Promise<AvailabilitySlot[]> {
-  await fakeDelay(200);
-  const taken = new Set(
-    readAppointments()
-      .filter((a) => a.status !== 'cancelled')
-      .map((a) => a.startsAt),
-  );
-  return buildDaySlots(professionalId, isoDate).map((slot) =>
-    taken.has(slot.startsAt) ? { ...slot, available: false } : slot,
-  );
+  const booked = await activeAppointments().list();
+  return markTakenSlots(buildDaySlots(professionalId, isoDate), booked, professionalId);
 }
 
 async function listAppointments(): Promise<Appointment[]> {
-  await fakeDelay(200);
-  return [...readAppointments()].sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1));
+  return activeAppointments().list();
 }
 
 async function getAppointment(id: string): Promise<Appointment> {
-  await fakeDelay(120);
-  const appointment = readAppointments().find((a) => a.id === id);
-  if (!appointment) {
-    throw new AppError(i18n.t('professionals.appointmentNotFound'), 'unknown', 404);
-  }
+  const appointment = await activeAppointments().findById(id);
+  if (!appointment) throw AppError.withKey('professionals.appointmentNotFound', 'unknown', 404);
   return appointment;
 }
 
-export interface BookingInput {
-  professionalId: string;
-  startsAt: string;
-  mode: SessionMode;
-  reason?: string;
-}
-
+/**
+ * Books an intent to meet. The clash check is a courtesy for the user's own
+ * diary; a slot held by someone else is invisible to the app and comes back
+ * from the backend as a 409, which is translated to the same message.
+ */
 async function book(input: BookingInput): Promise<Appointment> {
-  await fakeDelay();
-  const professional = getProfessional(input.professionalId);
-  if (!professional) {
-    throw new AppError(i18n.t('professionals.notFound'), 'unknown', 404);
+  const professional = await activeDirectory().findById(input.professionalId);
+  if (!professional) throw AppError.withKey('professionals.notFound', 'unknown', 404);
+
+  const existing = await activeAppointments().list();
+  if (hasClashingAppointment(existing, input.startsAt)) {
+    throw AppError.withKey('professionals.slotTakenError', 'validation', 409);
   }
-  const existing = readAppointments();
-  if (existing.some((a) => a.startsAt === input.startsAt && a.status !== 'cancelled')) {
-    throw new AppError(i18n.t('professionals.slotTakenError'), 'validation', 409);
+
+  try {
+    return await activeAppointments().create(input);
+  } catch (error) {
+    throw asBookingError(error);
   }
-  const appointment: Appointment = {
-    id: `appointment-${Date.now()}`,
-    professionalId: input.professionalId,
-    startsAt: input.startsAt,
-    durationMinutes: DEFAULT_SESSION_MINUTES,
-    mode: input.mode,
-    // Only a real provider can confirm — the app never self-confirms a booking.
-    status: 'pending',
-    reason: input.reason?.trim() ? input.reason.trim() : undefined,
-    createdAt: new Date().toISOString(),
-  };
-  writeAppointments([appointment, ...existing]);
-  return appointment;
 }
 
 async function reschedule(id: string, startsAt: string): Promise<Appointment> {
-  await fakeDelay();
-  const appointments = readAppointments();
-  const index = appointments.findIndex((a) => a.id === id);
-  if (index === -1) {
-    throw new AppError(i18n.t('professionals.appointmentNotFound'), 'unknown', 404);
+  try {
+    return await activeAppointments().reschedule(id, startsAt);
+  } catch (error) {
+    throw asBookingError(error);
   }
-  const updated: Appointment = { ...appointments[index], startsAt, status: 'pending' };
-  appointments[index] = updated;
-  writeAppointments(appointments);
-  return updated;
 }
 
 async function cancel(id: string): Promise<Appointment> {
-  await fakeDelay();
-  const appointments = readAppointments();
-  const index = appointments.findIndex((a) => a.id === id);
-  if (index === -1) {
-    throw new AppError(i18n.t('professionals.appointmentNotFound'), 'unknown', 404);
+  try {
+    return await activeAppointments().cancel(id);
+  } catch (error) {
+    throw asBookingError(error);
   }
-  const updated: Appointment = {
-    ...appointments[index],
-    status: 'cancelled',
-    cancelledAt: new Date().toISOString(),
-  };
-  appointments[index] = updated;
-  writeAppointments(appointments);
-  return updated;
 }
 
-if (!config.useMockServices) {
-  throw new AppError(
-    'professionalService: config.useMockServices=false but no real implementation is wired up yet.',
-    'unknown',
-  );
+/** Gives 409/404 from either implementation the specific message key. */
+function asBookingError(error: unknown): unknown {
+  if (error instanceof AppError && error.status === 409) {
+    return AppError.withKey('professionals.slotTakenError', 'validation', 409);
+  }
+  if (error instanceof AppError && error.status === 404) {
+    return AppError.withKey('professionals.appointmentNotFound', 'unknown', 404);
+  }
+  return error;
 }
 
 export const professionalService = {
@@ -159,3 +141,5 @@ export const professionalService = {
   reschedule,
   cancel,
 };
+
+export type { BookingInput } from './professionalRepository';

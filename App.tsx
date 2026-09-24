@@ -12,11 +12,15 @@ import { AnimatedSplash } from './src/ui/splash/AnimatedSplash';
 import { useAppFonts } from './src/ui/fonts/useAppFonts';
 import { ErrorBoundary } from './src/core/errors';
 import { queryClient } from './src/core/api';
+import { composeRepositories } from './src/core/composition';
 import { useAuthStore } from './src/core/auth/authStore';
 import { OfflineBanner } from './src/core/network/OfflineBanner';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Wire repositories before anything can call a use case.
+composeRepositories();
 
 function AppShell() {
   const { fontsReady, fontsAvailable } = useAppFonts();

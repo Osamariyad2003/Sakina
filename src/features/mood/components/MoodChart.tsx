@@ -8,14 +8,21 @@ import type { TrendPoint } from '../services/moodService';
 interface MoodChartProps {
   points: TrendPoint[];
   height?: number;
+  /** Ceiling of the value being charted — 5 for Mood's 5-level scale, 3 for Stress's low/medium/high. */
+  maxValue?: number;
 }
 
-/** Simple bar chart (react-native-svg per spec §15). Axis order flips for RTL. */
-export function MoodChart({ points, height = 140 }: MoodChartProps) {
+/**
+ * Simple bar chart (react-native-svg per spec §15). Axis order flips for
+ * RTL. Generic over any `{date, averageWeight}` trend (Mood's 1-5 weights,
+ * Stress's 1-3 weights) — reused by StressHistoryScreen and the Home
+ * summary cards rather than duplicating the charting approach.
+ */
+export function MoodChart({ points, height = 140, maxValue = 5 }: MoodChartProps) {
   const theme = useTheme();
   const width = Math.max(points.length * 28, 200);
   const barWidth = 14;
-  const maxWeight = 5;
+  const maxWeight = maxValue;
 
   // Canvas coordinate space is always LTR; reverse the data order under RTL
   // so "most recent" reads on the correct side for an Arabic-reading eye.

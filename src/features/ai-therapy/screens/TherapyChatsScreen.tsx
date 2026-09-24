@@ -11,8 +11,8 @@ import {
   useTrashConversationMutation,
   useDeleteConversationMutation,
 } from '../state/useTherapyQueries';
-import type { AppError } from '../../../core/errors';
 import type { CompanionStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<CompanionStackParamList, 'TherapyChats'>;
 
@@ -53,7 +53,7 @@ export function TherapyChatsScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : list.length === 0 ? (
           <EmptyState
             title={tab === 'trash' ? t('therapy.trashEmptyTitle') : t('therapy.recentEmptyTitle')}

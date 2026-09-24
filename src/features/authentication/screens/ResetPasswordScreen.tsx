@@ -9,8 +9,8 @@ import { PasswordField } from '../components/PasswordField';
 import { useTheme } from '../../../ui/theme';
 import { useResetPasswordMutation } from '../state/useAuthMutations';
 import { buildResetPasswordSchema, type ResetPasswordFormValues } from '../validation/schemas';
-import type { AppError } from '../../../core/errors';
 import type { AuthStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ResetPassword'>;
 
@@ -99,7 +99,7 @@ export function ResetPasswordScreen({ navigation, route }: Props) {
                 )}
               />
 
-              {mutation.isError ? <ErrorState message={(mutation.error as AppError).message} /> : null}
+              {mutation.isError ? <ErrorState message={errorText(mutation.error, t)} /> : null}
 
               <Button label={t('auth.resetPasswordButton')} onPress={handleSubmit(onSubmit)} loading={mutation.isPending} />
             </>

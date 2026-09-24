@@ -22,8 +22,8 @@ import { useTheme } from '../../../ui/theme';
 import { CommunityGuidelinesCard } from '../components/CommunityGuidelinesCard';
 import { useCommunityGroupsQuery, useCommunityProfileQuery, useSaveCommunityProfileMutation } from '../state/useCommunityQueries';
 import { aliasSuggestions, MAX_ALIAS_LENGTH } from '../models/communityContent';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList, AppTabsParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<HomeStackParamList, 'Community'>,
@@ -63,7 +63,7 @@ export function CommunityScreen({ navigation }: Props) {
           joinSheet.current?.close();
           toast.show({ message: t('community.joinedToast'), tone: 'success' });
         },
-        onError: (error) => toast.show({ message: (error as AppError).message, tone: 'error' }),
+        onError: (error) => toast.show({ message: errorText(error, t), tone: 'error' }),
       },
     );
   };
@@ -113,7 +113,7 @@ export function CommunityScreen({ navigation }: Props) {
         {groupsQuery.isLoading ? (
           <SkeletonList rows={4} />
         ) : groupsQuery.isError ? (
-          <ErrorState message={(groupsQuery.error as AppError).message} onRetry={() => groupsQuery.refetch()} />
+          <ErrorState message={errorText(groupsQuery.error, t)} onRetry={() => groupsQuery.refetch()} />
         ) : (
           (groupsQuery.data ?? []).map((group) => (
             <Card

@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { professionalService, type BookingInput } from '../services/professionalService';
 import type { DirectoryFilter } from '../models/professionalContent';
 
 export const professionalQueryKeys = {
   all: ['professionals'] as const,
-  directory: (filter: DirectoryFilter) => [...professionalQueryKeys.all, 'directory', filter] as const,
+  directory: (filter: DirectoryFilter, language: string) =>
+    [...professionalQueryKeys.all, 'directory', filter, language] as const,
   professional: (id: string) => [...professionalQueryKeys.all, 'professional', id] as const,
   availability: (id: string, isoDate: string) => [...professionalQueryKeys.all, 'availability', id, isoDate] as const,
   appointments: () => [...professionalQueryKeys.all, 'appointments'] as const,
@@ -12,9 +14,15 @@ export const professionalQueryKeys = {
 };
 
 export function useProfessionalsQuery(filter: DirectoryFilter) {
+  // Search matches specialty labels, which differ per language — so the
+  // language is part of the cache key, and the use case is told explicitly
+  // rather than reading a global (docs/architecture-review.md §6.5).
+  const { i18n } = useTranslation();
+  const isArabic = i18n.language !== 'en';
+
   return useQuery({
-    queryKey: professionalQueryKeys.directory(filter),
-    queryFn: () => professionalService.listProfessionals(filter),
+    queryKey: professionalQueryKeys.directory(filter, i18n.language),
+    queryFn: () => professionalService.listProfessionals(filter, isArabic),
   });
 }
 

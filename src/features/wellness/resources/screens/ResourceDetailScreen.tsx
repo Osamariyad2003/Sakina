@@ -5,12 +5,13 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
-import { Screen, AppText, Card, Badge, Button, IconButton, LoadingState, ErrorState } from '../../../../ui/primitives';
+import { Screen, AppText, Card, Badge, Button, IconButton, LoadingState, ErrorState, ContentImage } from '../../../../ui/primitives';
 import { useTheme } from '../../../../ui/theme';
 import { useArticleQuery, useIsSavedQuery, useToggleSavedMutation } from '../state/useResourceQueries';
 import { getTopic } from '../models/resourceContent';
-import type { AppError } from '../../../../core/errors';
+import { useContentImage } from '../../state/useContentImages';
 import type { WellnessStackParamList, AppTabsParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<WellnessStackParamList, 'ResourceDetail'>,
@@ -28,6 +29,7 @@ export function ResourceDetailScreen({ navigation, route }: Props) {
   const isArabic = i18n.language !== 'en';
   const query = useArticleQuery(route.params.resourceId);
   const savedQuery = useIsSavedQuery(route.params.resourceId);
+  const curatedImage = useContentImage('resource_article', route.params.resourceId);
   const toggleSaved = useToggleSavedMutation();
 
   if (query.isLoading) return <LoadingState />;
@@ -35,7 +37,7 @@ export function ResourceDetailScreen({ navigation, route }: Props) {
     return (
       <Screen>
         <ErrorState
-          message={(query.error as AppError)?.message ?? t('resources.articleNotFound')}
+          message={errorText(query.error, t) ?? t('resources.articleNotFound')}
           onRetry={() => query.refetch()}
         />
       </Screen>
@@ -50,6 +52,9 @@ export function ResourceDetailScreen({ navigation, route }: Props) {
   return (
     <Screen edges={['top']} padded={false}>
       <ScrollView contentContainerStyle={{ padding: theme.spacing.md, gap: theme.spacing.md }}>
+        {curatedImage ?? article.image ? (
+          <ContentImage image={curatedImage ?? article.image} height={200} />
+        ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: theme.spacing.sm }}>
           <View style={{ flex: 1, gap: theme.spacing.xs }}>
             {topic ? <Badge label={isArabic ? topic.labelAr : topic.labelEn} color={accent} /> : null}

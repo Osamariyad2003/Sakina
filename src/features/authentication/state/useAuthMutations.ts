@@ -1,6 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { authService } from '../services/authService';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { syncOnboardingAnswers } from '../../onboarding/services/onboardingService';
 import type { LoginPayload, RegisterPayload, ForgotPasswordPayload, ResetPasswordPayload } from '../models/auth';
 
 /**
@@ -14,16 +16,28 @@ export function useLoginMutation() {
 
   return useMutation({
     mutationFn: (payload: LoginPayload) => authService.login(payload),
-    onSuccess: (data) => setSession(data.user, data.accessToken, data.refreshToken),
+    onSuccess: async (data) => {
+      await setSession(data.user, data.accessToken, data.refreshToken);
+      // Best-effort: push the onboarding answers collected before login.
+      void syncOnboardingAnswers().catch(() => {});
+    },
   });
 }
 
 export function useRegisterMutation() {
+  const { i18n } = useTranslation();
   const setSession = useAuthStore((s) => s.setSession);
 
   return useMutation({
-    mutationFn: (payload: RegisterPayload) => authService.register(payload),
-    onSuccess: (data) => setSession(data.user, data.accessToken, data.refreshToken),
+    // The account's language is the app's language at sign-up; the service
+    // no longer reads it from a global.
+    mutationFn: (payload: RegisterPayload) =>
+      authService.register({ ...payload, language: i18n.language === 'en' ? 'en' : 'ar' }),
+    onSuccess: async (data) => {
+      await setSession(data.user, data.accessToken, data.refreshToken);
+      // Best-effort: push the onboarding answers collected before login.
+      void syncOnboardingAnswers().catch(() => {});
+    },
   });
 }
 

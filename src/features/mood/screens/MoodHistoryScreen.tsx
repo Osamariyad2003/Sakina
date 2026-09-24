@@ -10,8 +10,8 @@ import { AnimatedLottie } from '../../../ui/lottie';
 import { useMoodHistoryQuery } from '../state/useMoodQueries';
 import { MoodHistoryCard } from '../components/MoodHistoryCard';
 import { MoodCalendar } from '../components/MoodCalendar';
-import type { AppError } from '../../../core/errors';
 import type { MoodStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<MoodStackParamList, 'MoodHistory'>;
 
@@ -63,7 +63,7 @@ export function MoodHistoryScreen({ navigation }: Props) {
         {historyQuery.isLoading ? (
           <SkeletonList rows={5} />
         ) : historyQuery.isError ? (
-          <ErrorState message={(historyQuery.error as AppError).message} onRetry={() => historyQuery.refetch()} />
+          <ErrorState message={errorText(historyQuery.error, t)} onRetry={() => historyQuery.refetch()} />
         ) : entries.length === 0 ? (
           <EmptyState
             title={t('mood.emptyTitle')}

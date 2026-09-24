@@ -13,8 +13,8 @@ import { moodColor } from '../components/moodColors';
 import { moodLevels, companionCatalog, metricScales } from '../models/moodContent';
 import { useCreateMoodEntryMutation } from '../state/useMoodQueries';
 import type { MoodLevel, MoodMetrics } from '../../../types/models';
-import type { AppError } from '../../../core/errors';
 import type { MoodStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<MoodStackParamList, 'MoodCheckIn'>;
 
@@ -221,7 +221,7 @@ export function MoodCheckInScreen({ navigation, route }: Props) {
 
           {mutation.isError ? (
             <AppText variant="caption" color={theme.colors.status.error}>
-              {(mutation.error as AppError).message}
+              {errorText(mutation.error, t)}
             </AppText>
           ) : null}
 

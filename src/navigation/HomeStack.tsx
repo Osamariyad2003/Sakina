@@ -15,6 +15,7 @@ import { CommunityScreen } from '../features/community/screens/CommunityScreen';
 import { CommunityGroupScreen } from '../features/community/screens/CommunityGroupScreen';
 import { CommunityThreadScreen } from '../features/community/screens/CommunityThreadScreen';
 import { NewCommunityThreadScreen } from '../features/community/screens/NewCommunityThreadScreen';
+import { InsightsScreen } from '../features/insights/screens/InsightsScreen';
 import { NotFoundScreen } from '../features/errors/screens/NotFoundScreen';
 import { stackScreenOptions, modalScreenOptions } from './animations';
 
@@ -47,6 +48,8 @@ export function HomeStack() {
       <Stack.Screen name="CommunityGroup" component={CommunityGroupScreen} />
       <Stack.Screen name="CommunityThread" component={CommunityThreadScreen} />
       <Stack.Screen name="NewCommunityThread" component={NewCommunityThreadScreen} options={modalScreenOptions} />
+      {/* Cross-domain Insights dashboard (features/insights). */}
+      <Stack.Screen name="Insights" component={InsightsScreen} />
       {/* Utility. */}
       <Stack.Screen name="NotFound" component={NotFoundScreen} />
     </Stack.Navigator>

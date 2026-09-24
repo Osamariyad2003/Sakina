@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { companionService } from '../services/companionService';
 import { mapError } from '../../../core/errors';
 import type { AppError } from '../../../core/errors';
@@ -13,6 +14,7 @@ export type ChatStatus = 'idle' | 'loadingHistory' | 'sending' | 'streaming';
  * last bubble in place rather than refetch a query.
  */
 export function useCompanionChat() {
+  const { i18n } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<ChatStatus>('loadingHistory');
   const [error, setError] = useState<AppError | null>(null);
@@ -63,6 +65,7 @@ export function useCompanionChat() {
 
     try {
       const result = await companionService.sendMessage(trimmed, {
+        language: i18n.language === 'en' ? 'en' : 'ar',
         onToken: (partial) => {
           if (!streamingStarted) {
             streamingStarted = true;
@@ -108,5 +111,24 @@ export function useCompanionChat() {
     }
   }, [send]);
 
-  return { messages, status, error, riskDetected, suggestion, send, retry, canRetry: Boolean(lastFailedText.current) };
+  const clear = useCallback(async () => {
+    await companionService.clearHistory();
+    lastFailedText.current = null;
+    setMessages([]);
+    setError(null);
+    setRiskDetected(false);
+    setSuggestion(undefined);
+  }, []);
+
+  return {
+    messages,
+    status,
+    error,
+    riskDetected,
+    suggestion,
+    send,
+    retry,
+    clear,
+    canRetry: Boolean(lastFailedText.current),
+  };
 }

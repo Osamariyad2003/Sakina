@@ -7,8 +7,8 @@ import { Screen, AppText, SegmentedControl, SkeletonList, ErrorState, EmptyState
 import { useTheme } from '../../../ui/theme';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { useAppointmentsQuery } from '../state/useProfessionalQueries';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'Appointments'>;
 
@@ -50,7 +50,7 @@ export function AppointmentsScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={3} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : appointments.length === 0 ? (
           <EmptyState
             title={filter === 'upcoming' ? t('professionals.noUpcomingTitle') : t('professionals.noPastTitle')}

@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { resourceService, type ArticleFilter } from '../services/resourceService';
 import type { ResourceTopic } from '../models/resourceContent';
 
 export const resourceQueryKeys = {
   all: ['resources'] as const,
-  articles: (filter: ArticleFilter) => [...resourceQueryKeys.all, 'articles', filter] as const,
+  articles: (filter: ArticleFilter, language: string) =>
+    [...resourceQueryKeys.all, 'articles', filter, language] as const,
   article: (id: string) => [...resourceQueryKeys.all, 'article', id] as const,
   workshops: (topic: ResourceTopic | null | undefined) => [...resourceQueryKeys.all, 'workshops', topic ?? ''] as const,
   workshop: (id: string) => [...resourceQueryKeys.all, 'workshop', id] as const,
@@ -15,9 +17,12 @@ export const resourceQueryKeys = {
 };
 
 export function useArticlesQuery(filter: ArticleFilter) {
+  // Search matches the Arabic or English copy, so language belongs in the key.
+  const { i18n } = useTranslation();
+
   return useQuery({
-    queryKey: resourceQueryKeys.articles(filter),
-    queryFn: () => resourceService.listArticles(filter),
+    queryKey: resourceQueryKeys.articles(filter, i18n.language),
+    queryFn: () => resourceService.listArticles(filter, i18n.language !== 'en'),
   });
 }
 

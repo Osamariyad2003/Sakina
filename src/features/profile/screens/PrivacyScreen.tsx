@@ -3,18 +3,23 @@ import { View, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Screen, AppText, Card, Button, useToast } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
-import { clearAllLocalContentData } from '../../../core/storage/mmkv';
+
+import { useClearMyDataMutation } from '../state/useProfileMutations';
+import { AIPersonalizationCard } from '../../ai-companion/components/AIPersonalizationCard';
+import { errorText } from '../../../core/errors';
 
 /**
  * [ASSUMPTION] Data export/delete controls are flagged as undefined in
  * product-definition.md §11/Open Question #5 — this "clear my data" action
  * is a real local-only implementation (wipes the MMKV mock stores), not
- * yet a server-side delete, since no backend exists.
+ * a server-side delete on its own; with the real API on it is preceded by
+ * profileService.clearServerData() (POST /profile/clear-data).
  */
 export function PrivacyScreen() {
   const theme = useTheme();
   const { t } = useTranslation();
   const toast = useToast();
+  const clearMyData = useClearMyDataMutation();
 
   const confirmClear = () => {
     Alert.alert(t('privacy.clearDataConfirmTitle'), t('privacy.clearDataConfirmMessage'), [
@@ -22,8 +27,14 @@ export function PrivacyScreen() {
       {
         text: t('privacy.clearDataConfirmCta'),
         style: 'destructive',
-        onPress: () => {
-          clearAllLocalContentData();
+        onPress: async () => {
+          // Ordering (server → local → query cache) lives in the mutation.
+          try {
+            await clearMyData.mutateAsync();
+          } catch (error) {
+            toast.show({ message: errorText(error, t), tone: 'error' });
+            return;
+          }
           toast.show({ message: t('privacy.clearDataSuccess'), tone: 'success' });
         },
       },
@@ -41,6 +52,8 @@ export function PrivacyScreen() {
             {t('privacy.consentStatusBody')}
           </AppText>
         </Card>
+
+        <AIPersonalizationCard />
 
         <Card>
           <AppText variant="titleMd">{t('privacy.clearDataTitle')}</AppText>

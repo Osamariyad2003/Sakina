@@ -18,6 +18,7 @@ import { bookingDateKeys, sessionModeMeta } from '../models/professionalContent'
 import type { AppError } from '../../../core/errors';
 import type { SessionMode } from '../../../types/models';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'BookAppointment'>;
 
@@ -61,7 +62,7 @@ export function BookAppointmentScreen({ navigation, route }: Props) {
     return (
       <Screen>
         <ErrorState
-          message={(professionalQuery.error as AppError)?.message ?? t('professionals.notFound')}
+          message={errorText(professionalQuery.error, t) ?? t('professionals.notFound')}
           onRetry={() => professionalQuery.refetch()}
         />
       </Screen>
@@ -78,7 +79,7 @@ export function BookAppointmentScreen({ navigation, route }: Props) {
             toast.show({ message: t('professionals.rescheduled'), tone: 'success' });
             navigation.replace('AppointmentConfirmed', { appointmentId: appointment.id });
           },
-          onError: (error) => toast.show({ message: (error as AppError).message, tone: 'error' }),
+          onError: (error) => toast.show({ message: errorText(error, t), tone: 'error' }),
         },
       );
       return;
@@ -87,7 +88,7 @@ export function BookAppointmentScreen({ navigation, route }: Props) {
       { professionalId, startsAt: selectedSlot, mode: effectiveMode, reason },
       {
         onSuccess: (appointment) => navigation.replace('AppointmentConfirmed', { appointmentId: appointment.id }),
-        onError: (error) => toast.show({ message: (error as AppError).message, tone: 'error' }),
+        onError: (error) => toast.show({ message: errorText(error, t), tone: 'error' }),
       },
     );
   };

@@ -1,4 +1,21 @@
 import type { WellnessExerciseContent } from '../../models/wellnessContent';
+import type { StressLevel } from '../../../../types/models';
+
+/** Canonical stress-level catalog — Home's quick-set widget imports this via `home/models/homeContent.ts`. */
+export interface StressLevelOption {
+  level: StressLevel;
+  labelAr: string;
+  labelEn: string;
+}
+
+export const stressLevelOptions: StressLevelOption[] = [
+  { level: 'low', labelAr: 'منخفض', labelEn: 'Low' },
+  { level: 'medium', labelAr: 'متوسط', labelEn: 'Medium' },
+  { level: 'high', labelAr: 'مرتفع', labelEn: 'High' },
+];
+
+/** Numeric weight for charting only — never shown to the user as a "score" (same posture as moodLevelWeight). */
+export const stressLevelWeight: Record<StressLevel, number> = { low: 1, medium: 2, high: 3 };
 
 /**
  * [ASSUMPTION] Neither spec doc has a standalone "Stress Management"
@@ -84,6 +101,50 @@ export const stressTechniques: WellnessExerciseContent[] = [
 
 /** The technique surfaced by the Overview screen's "quick relief" shortcut. */
 export const quickReliefTechniqueId = 'stress-quick-calm';
+
+/**
+ * Stress-entry suggestion content — same shape/posture as
+ * `mood/models/moodContent.ts`'s `moodSuggestions` (draft, non-clinical
+ * copy). Each suggestion's `techniqueId` is a real id from
+ * `stressTechniques` above, so its detail screen's CTA opens an actual
+ * exercise rather than staying purely informational.
+ */
+export interface StressSuggestion {
+  id: string;
+  techniqueId: string;
+  titleAr: string;
+  titleEn: string;
+  summaryAr: string;
+  summaryEn: string;
+  tipAr: string;
+  tipEn: string;
+  minutesLabel: string;
+}
+
+export const stressSuggestions: StressSuggestion[] = [
+  {
+    id: 'high-stress-relief',
+    techniqueId: 'stress-quick-calm',
+    titleAr: 'وقتك تاخد نفس',
+    titleEn: 'Time to breathe',
+    summaryAr: 'مستوى توترك كان مرتفع هالفترة. تمرين تنفس قصير هلأ ممكن يساعدك ترجع تهدى.',
+    summaryEn: "Your stress has been running high lately. A short breathing exercise right now can help you settle.",
+    tipAr: 'ما لازم تلغي التوتر بالكامل — بس تعطي جسمك لحظة يرتاح فيها.',
+    tipEn: "You don't need to erase the stress — just give your body one moment to rest.",
+    minutesLabel: '1-3',
+  },
+  {
+    id: 'recurring-trigger',
+    techniqueId: 'stress-reframing',
+    titleAr: 'نفس السبب رجع تكرر',
+    titleEn: 'The same trigger keeps coming up',
+    summaryAr: 'لاحظنا إن نفس السبب عم يرجع يضغط عليك. خطوات بسيطة تساعدك تشوفه من زاوية أهدى.',
+    summaryEn: "We've noticed the same reason keeps pressuring you. A few simple steps can help you see it from a calmer angle.",
+    tipAr: 'الأسباب المتكررة أحياناً بتحتاج خطة أصغر، مش بس نفس عميق.',
+    tipEn: 'A recurring trigger sometimes needs a small plan, not just a deep breath.',
+    minutesLabel: '2-3',
+  },
+];
 
 /**
  * [ASSUMPTION] Not in either spec doc — stubbed per this feature's own

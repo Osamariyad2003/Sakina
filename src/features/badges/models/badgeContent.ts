@@ -31,6 +31,15 @@ export interface BadgeSignals {
   journalStreak: number;
   wellnessSessionCount: number;
   wellnessMinutes: number;
+  /**
+   * Feature 7 (Mindful Minutes) — the meditation/breathing/relaxation subset
+   * of `wellnessMinutes`/sessions, tracked (and streaked) separately since
+   * it's what the reference's "Mindful Minutes" counter actually means, as
+   * opposed to every Wellness category (grounding, stress relief, sleep
+   * content also roll into the broader `wellnessMinutes`).
+   */
+  mindfulMinutes: number;
+  mindfulStreak: number;
   sleepRecordCount: number;
   hydrationLogCount: number;
   articlesRead: number;
@@ -168,6 +177,30 @@ export const badgeCatalog: BadgeDefinition[] = [
     accent: 'mindful',
     signal: 'wellnessMinutes',
     threshold: 60,
+  },
+  {
+    id: 'ten-mindful-minutes',
+    category: 'wellbeing',
+    titleAr: 'أول عشر دقايق',
+    titleEn: 'First ten mindful minutes',
+    descriptionAr: 'جمعت ١٠ دقايق من تأمل أو تنفس أو استرخاء.',
+    descriptionEn: 'You have gathered 10 minutes of meditation, breathing or relaxation practice.',
+    icon: 'sparkles-outline',
+    accent: 'mindful',
+    signal: 'mindfulMinutes',
+    threshold: 10,
+  },
+  {
+    id: 'mindful-streak',
+    category: 'wellbeing',
+    titleAr: 'ثلاثة أيام تأمل',
+    titleEn: 'Three days of mindfulness',
+    descriptionAr: 'مارست التأمل أو التنفس ثلاثة أيام متتالية.',
+    descriptionEn: 'You practiced meditation or breathing three days in a row.',
+    icon: 'flame-outline',
+    accent: 'mindful',
+    signal: 'mindfulStreak',
+    threshold: 3,
   },
   {
     id: 'sleep-tracked',

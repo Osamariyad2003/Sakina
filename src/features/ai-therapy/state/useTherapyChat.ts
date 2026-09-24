@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { therapyService } from '../services/therapyService';
 import { mapError } from '../../../core/errors';
 import type { AppError } from '../../../core/errors';
@@ -12,6 +13,7 @@ export type TherapyChatStatus = 'loadingHistory' | 'idle' | 'sending' | 'streami
  * the crisis flag that drives the in-chat Crisis Support banner.
  */
 export function useTherapyChat(conversationId: string) {
+  const { i18n } = useTranslation();
   const [messages, setMessages] = useState<TherapyMessage[]>([]);
   const [status, setStatus] = useState<TherapyChatStatus>('loadingHistory');
   const [error, setError] = useState<AppError | null>(null);
@@ -60,6 +62,7 @@ export function useTherapyChat(conversationId: string) {
 
       try {
         const result = await therapyService.sendMessage(conversationId, trimmed, {
+          language: i18n.language === 'en' ? 'en' : 'ar',
           onToken: (partial) => {
             if (!started) {
               started = true;

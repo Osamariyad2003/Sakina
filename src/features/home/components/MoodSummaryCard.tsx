@@ -5,7 +5,7 @@ import { Card, AppText, SkeletonList, ErrorState } from '../../../ui/primitives'
 import { useTheme } from '../../../ui/theme';
 import { useMoodTrendQuery } from '../../mood/state/useMoodQueries';
 import { MoodChart } from '../../mood/components/MoodChart';
-import type { AppError } from '../../../core/errors';
+import { errorText } from '../../../core/errors';
 
 /**
  * Structure: reference's mood card with a mini bar chart — reuses the
@@ -23,7 +23,12 @@ export function MoodSummaryCard() {
   const query = useMoodTrendQuery(7);
 
   return (
-    <Card style={{ width: 280, minHeight: 150, borderTopWidth: 3, borderTopColor: theme.colors.accent.mood }} elevation="md">
+    <Card
+      // Tinted block per the reference carousel. Sakina's accents are soft
+      // pastels, so body text keeps its normal dark colour on top.
+      style={{ width: 280, minHeight: 150, backgroundColor: theme.colors.accent.mood }}
+      elevation="md"
+    >
       <AppText variant="label" color={theme.colors.text.secondary}>
         {t('home.moodSummaryCardTitle')}
       </AppText>
@@ -31,7 +36,7 @@ export function MoodSummaryCard() {
         {query.isLoading ? (
           <SkeletonList rows={2} rowHeight={16} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : query.data ? (
           <MoodChart points={query.data} height={90} />
         ) : null}

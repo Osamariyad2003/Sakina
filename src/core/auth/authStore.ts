@@ -1,4 +1,6 @@
+import axios from 'axios';
 import { create } from 'zustand';
+import { config } from '../../config';
 import { clearTokens, getStoredTokens, storeTokens } from '../storage/secureStore';
 import { storage, storageKeys } from '../storage/mmkv';
 import type { User } from '../../types/models';
@@ -64,6 +66,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    if (!config.useMockServices) {
+      // Best-effort server-side revoke of the refresh token; logging out
+      // locally must never depend on the network. Plain axios (not
+      // `apiClient`) to avoid a circular import and the 401-refresh interceptor.
+      const { refreshToken } = await getStoredTokens();
+      if (refreshToken) {
+        await axios.post(`${config.apiBaseUrl}/auth/logout`, { refreshToken }).catch(() => {});
+      }
+    }
     await clearTokens();
     storage.delete(storageKeys.currentUserProfile);
     set({ status: 'unauthenticated', user: null, accessToken: null });

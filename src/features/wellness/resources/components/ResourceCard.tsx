@@ -2,9 +2,10 @@ import React from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Card, AppText, Badge } from '../../../../ui/primitives';
+import { Card, AppText, Badge, ContentImage } from '../../../../ui/primitives';
 import { useTheme } from '../../../../ui/theme';
 import { getTopic, type ResourceArticle } from '../models/resourceContent';
+import { useContentImage } from '../../state/useContentImages';
 
 interface ResourceCardProps {
   article: ResourceArticle;
@@ -18,6 +19,8 @@ export function ResourceCard({ article, onPress, compact = false }: ResourceCard
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language !== 'en';
   const topic = getTopic(article.topic);
+  // Curated server-side; the content file's own image is the fallback.
+  const image = useContentImage('resource_article', article.id) ?? article.image;
   const accent = topic ? theme.colors.accent[topic.accent] : theme.colors.brand.primary;
 
   return (
@@ -31,6 +34,14 @@ export function ResourceCard({ article, onPress, compact = false }: ResourceCard
         ...(compact ? { width: 240 } : null),
       }}
     >
+      {image ? (
+        <ContentImage
+          image={image}
+          height={compact ? 96 : 140}
+          radiusKey="md"
+          style={{ marginBottom: theme.spacing.xxs }}
+        />
+      ) : null}
       {topic ? <Badge label={isArabic ? topic.labelAr : topic.labelEn} color={accent} /> : null}
       <AppText variant="titleMd" numberOfLines={compact ? 2 : undefined}>
         {isArabic ? article.titleAr : article.titleEn}

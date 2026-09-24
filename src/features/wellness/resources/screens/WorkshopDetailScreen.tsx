@@ -13,8 +13,8 @@ import {
   useToggleRegistrationMutation,
 } from '../state/useResourceQueries';
 import { getTopic } from '../models/resourceContent';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'WorkshopDetail'>;
 
@@ -40,7 +40,7 @@ export function WorkshopDetailScreen({ route }: Props) {
     return (
       <Screen>
         <ErrorState
-          message={(query.error as AppError)?.message ?? t('resources.workshopNotFound')}
+          message={errorText(query.error, t) ?? t('resources.workshopNotFound')}
           onRetry={() => query.refetch()}
         />
       </Screen>
@@ -130,7 +130,7 @@ export function WorkshopDetailScreen({ route }: Props) {
                   message: registered ? t('resources.registeredToast') : t('resources.unregisteredToast'),
                   tone: 'success',
                 }),
-              onError: (error) => toast.show({ message: (error as AppError).message, tone: 'error' }),
+              onError: (error) => toast.show({ message: errorText(error, t), tone: 'error' }),
             })
           }
         />

@@ -14,8 +14,8 @@ import {
 } from '../state/useJournalQueries';
 import { useJournalDraft } from '../state/useJournalDraft';
 import { buildJournalEntrySchema } from '../validation/schemas';
-import type { AppError } from '../../../core/errors';
 import type { JournalStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<JournalStackParamList, 'JournalEntry'>;
 
@@ -117,7 +117,7 @@ export function JournalEntryScreen({ navigation, route }: Props) {
   if (isEditing && entryQuery.isError) {
     return (
       <Screen>
-        <ErrorState message={(entryQuery.error as AppError).message} onRetry={() => entryQuery.refetch()} />
+        <ErrorState message={errorText(entryQuery.error, t)} onRetry={() => entryQuery.refetch()} />
       </Screen>
     );
   }
@@ -140,7 +140,7 @@ export function JournalEntryScreen({ navigation, route }: Props) {
           {isEditing && entryQuery.data ? <AIReflectionCard entry={entryQuery.data} /> : null}
 
           {validationError ? <ErrorState message={validationError} /> : null}
-          {mutation.isError ? <ErrorState message={(mutation.error as AppError).message} /> : null}
+          {mutation.isError ? <ErrorState message={errorText(mutation.error, t)} /> : null}
 
           <Button label={t('common.save')} onPress={save} loading={mutation.isPending} />
           {isEditing ? (

@@ -37,7 +37,7 @@ export function StressLevelRow({ signal }: StressLevelRowProps) {
     <>
       <Card onPress={() => sheetRef.current?.expand()} style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
         <Ionicons name={meta.icon} size={22} color={theme.colors.accent.stress} />
-        <View style={{ flex: 1 }}>
+        <View style={{ flexShrink: 1 }}>
           <AppText variant="label">{t('home.tracker.stressLevelLabel')}</AppText>
           <AppText variant="caption" color={theme.colors.text.secondary}>
             {currentOption ? (isArabic ? currentOption.labelAr : currentOption.labelEn) : t('home.tracker.stressLevelUnset')}

@@ -1,8 +1,9 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
-import { containsRiskLanguage } from '../models/riskDetection';
+import { containsRiskLanguage } from '../../../domain/safety/riskDetection';
 import { config } from '../../../config';
 import { apiClient } from '../../../core/api/client';
-import type { ChatMessage } from '../../../types/models';
+import { AIActionSchema, type AIAction, type AIActionType, type ChatMessage } from '../../../types/models';
+import { isAiPersonalizationEnabled } from '../state/useAiPersonalization';
 
 /**
  * The AI Companion service. Two branches share one contract
@@ -65,6 +66,33 @@ const keywordReplies: { keywords: string[]; reply: string; suggestion?: 'stressM
   },
 ];
 
+/**
+ * The i18n key for an action's button label. The service hands back a key,
+ * not a translated string; `AIActionRow` renders it.
+ */
+function actionLabelKey(type: AIActionType): string {
+  return `companion.actions.${type}`;
+}
+
+function makeAction(type: AIActionType): AIAction {
+  return { type, label: actionLabelKey(type) };
+}
+
+/** Mock-mode stand-in for the backend's suggested actions: a few obvious keyword → action pairs. */
+function pickMockActions(userText: string): AIAction[] {
+  const text = userText.trim();
+  if (['ضغط', 'متوتر', 'توتر', 'تنفس', 'نفس', 'stress', 'breathing', 'panic'].some((k) => text.includes(k))) {
+    return [makeAction('breathing')];
+  }
+  if (['حزين', 'حزن', 'وحيد', 'وحدة', 'sad', 'lonely'].some((k) => text.includes(k))) {
+    return [makeAction('journal'), makeAction('mood_checkin')];
+  }
+  if (['نوم', 'أرق', 'sleep', 'insomnia'].some((k) => text.includes(k))) {
+    return [makeAction('sleep')];
+  }
+  return [];
+}
+
 /** Non-clinical topic hint (e.g. surface the Stress Management entry) — kept client-side in both branches. */
 function pickSuggestion(userText: string): 'stressManagement' | undefined {
   const normalized = userText.trim();
@@ -79,6 +107,13 @@ function pickMockReply(userText: string): string {
 
 interface SendMessageOptions {
   onToken?: (partialContent: string) => void;
+  /**
+   * Which language the reply should come back in. Passed by the caller — this
+   * module does not render and so cannot read the user's language, and
+   * importing i18n here drags React Native into its tests
+   * (docs/architecture-review.md §6.5).
+   */
+  language?: 'ar' | 'en';
 }
 
 interface SendMessageResult {
@@ -86,6 +121,8 @@ interface SendMessageResult {
   assistantMessage: ChatMessage;
   riskDetected: boolean;
   suggestion?: 'stressManagement';
+  /** Suggested next steps to render under the reply (already validated). */
+  actions: AIAction[];
 }
 
 async function getMessages(): Promise<ChatMessage[]> {
@@ -106,19 +143,53 @@ async function streamOut(fullReply: string, onToken?: (partial: string) => void,
   }
 }
 
-/** Calls the Claude-backed proxy and returns the assistant's reply text. */
-async function fetchLiveReply(history: ChatMessage[]): Promise<string> {
+interface LiveReply {
+  reply: string;
+  actions: AIAction[];
+  /** The backend's own safety layer classified the message as high risk. */
+  crisis: boolean;
+}
+
+/** Calls the backend companion (POST /companion/message) and returns its structured reply. */
+async function fetchLiveReply(history: ChatMessage[], language: 'ar' | 'en'): Promise<LiveReply> {
   const messages = history
     .slice(-MAX_HISTORY_SENT)
     .map((m) => ({ role: m.role, content: m.content }));
   // apiClient's interceptors map transport errors to AppError and attach auth.
-  const { data } = await apiClient.post<{ reply: string }>(config.companionApiPath, { messages });
-  const reply = data?.reply?.trim();
-  if (!reply) {
+  // The backend answers with { reply, riskFlagged, conversationId } directly (no { success, data }
+  // envelope, unlike its other routes); tolerate the wrapped form too.
+  const { data } = await apiClient.post<{
+    reply?: string;
+    conversationId?: string;
+    riskLevel?: 'normal' | 'concern' | 'high';
+    suggestedActions?: unknown;
+    data?: { reply?: string };
+  }>(
+    config.companionApiPath,
+    {
+      messages,
+      language,
+      // Only true when the user turned on personalised replies (Companion / Privacy).
+      personalize: isAiPersonalizationEnabled(),
+      conversationId: storage.getJSON<string>(storageKeys.companionServerConversationId) ?? undefined,
+    },
+  );
+  // Keep every reply in one server-side thread instead of opening a new one per message.
+  if (data?.conversationId) storage.setJSON(storageKeys.companionServerConversationId, data.conversationId);
+  const reply = (data?.reply ?? data?.data?.reply)?.trim();
+  // Validate what the backend sent rather than trusting it: unknown action types are dropped.
+  const actions = Array.isArray(data?.suggestedActions)
+    ? data.suggestedActions.flatMap((item) => {
+        const parsed = AIActionSchema.safeParse(item);
+        return parsed.success ? [parsed.data] : [];
+      })
+    : [];
+  return {
     // Empty/blocked model output must not render as a blank bubble.
-    return genericReplies[0];
-  }
-  return reply;
+    reply: reply || genericReplies[0],
+    actions,
+    crisis: data?.riskLevel === 'high',
+  };
 }
 
 async function sendMessage(userText: string, options: SendMessageOptions = {}): Promise<SendMessageResult> {
@@ -138,13 +209,20 @@ async function sendMessage(userText: string, options: SendMessageOptions = {}): 
   await delay(riskDetected ? 300 : 500); // "AI thinking" beat before streaming
 
   let fullReply: string;
+  let actions: AIAction[] = [];
+  let serverCrisis = false;
   if (riskDetected) {
     // Safety short-circuit — never route crisis language through the model.
     fullReply = RISK_RESPONSE;
+    actions = [makeAction('safety'), makeAction('professionals')];
   } else if (config.featureFlags.aiCompanionLive) {
-    fullReply = await fetchLiveReply(readMessages());
+    const live = await fetchLiveReply(readMessages(), options.language ?? 'ar');
+    fullReply = live.reply;
+    actions = live.actions;
+    serverCrisis = live.crisis;
   } else {
     fullReply = pickMockReply(userText);
+    actions = pickMockActions(userText);
   }
 
   await streamOut(fullReply, options.onToken);
@@ -155,13 +233,28 @@ async function sendMessage(userText: string, options: SendMessageOptions = {}): 
     role: 'assistant',
     content: fullReply,
     createdAt: new Date().toISOString(),
+    ...(actions.length ? { actions } : {}),
   };
   writeMessages([...readMessages(), assistantMessage]);
 
-  return { userMessage, assistantMessage, riskDetected, suggestion };
+  // The backend's classifier catches phrasing the on-device keyword list misses; either one raises the crisis UI.
+  return { userMessage, assistantMessage, riskDetected: riskDetected || serverCrisis, suggestion, actions };
+}
+
+/**
+ * Clears the on-device chat history and forgets the backend conversation id, so
+ * the next message starts a fresh server-side thread (the model gets no earlier
+ * context). The backend has no endpoint to delete a single companion
+ * conversation, so earlier messages remain server-side until the user runs
+ * Profile → Privacy → "Clear my data".
+ */
+async function clearHistory(): Promise<void> {
+  writeMessages([]);
+  storage.delete(storageKeys.companionServerConversationId);
 }
 
 export const companionService = {
   getMessages,
   sendMessage,
+  clearHistory,
 };

@@ -1,7 +1,8 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
+import { simulateLatency } from '../../../core/async/simulateLatency';
 import { config } from '../../../config';
 import { apiClient } from '../../../core/api/client';
-import { containsRiskLanguage } from '../../ai-companion/models/riskDetection';
+import { containsRiskLanguage } from '../../../domain/safety/riskDetection';
 import {
   detectEmotion,
   type CommunicationStyle,
@@ -13,8 +14,9 @@ import {
 /**
  * AI Therapy chatbot service. Conversations + per-conversation messages are
  * mock-persisted to MMKV. Replies come from the mock generator or, when
- * `config.featureFlags.aiCompanionLive` is on, the same Claude-backed proxy as
- * the AI Companion (the app never holds the key — see server/companion-proxy/).
+ * `config.featureFlags.aiCompanionLive` is on (it is whenever the real API is on),
+ * the backend's /companion/message — the same AI as the Companion (the app never
+ * holds a model key).
  *
  * SAFETY: `containsRiskLanguage` runs client-side on every user turn; crisis
  * language short-circuits to a supportive reply + a `crisis` emotion tag and
@@ -23,9 +25,6 @@ import {
  * detector (Open Question #3).
  */
 
-function fakeDelay(ms = 400) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 const MAX_HISTORY_SENT = 20;
 
@@ -58,17 +57,17 @@ export interface CreateConversationInput {
 }
 
 async function listConversations(): Promise<TherapyConversation[]> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   return readConversations().sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
 }
 
 async function getConversation(id: string): Promise<TherapyConversation | undefined> {
-  await fakeDelay(120);
+  await simulateLatency(120);
   return readConversations().find((c) => c.id === id);
 }
 
 async function createConversation(input: CreateConversationInput): Promise<TherapyConversation> {
-  await fakeDelay(250);
+  await simulateLatency(250);
   const now = new Date().toISOString();
   const conversation: TherapyConversation = {
     id: `therapy-${Date.now()}`,
@@ -90,7 +89,7 @@ async function createConversation(input: CreateConversationInput): Promise<Thera
 }
 
 async function setTrashed(id: string, trashed: boolean): Promise<TherapyConversation[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   const next = readConversations().map((c) =>
     c.id === id ? { ...c, trashed, trashedAt: trashed ? new Date().toISOString() : undefined } : c,
   );
@@ -99,8 +98,9 @@ async function setTrashed(id: string, trashed: boolean): Promise<TherapyConversa
 }
 
 async function deleteForever(id: string): Promise<TherapyConversation[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   storage.delete(messagesKey(id));
+  storage.delete(`${storageKeys.therapyServerConversationPrefix}${id}`);
   const next = readConversations().filter((c) => c.id !== id);
   writeConversations(next);
   return next;
@@ -109,7 +109,7 @@ async function deleteForever(id: string): Promise<TherapyConversation[]> {
 // --- Messages --------------------------------------------------------------
 
 async function getMessages(conversationId: string): Promise<TherapyMessage[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   return readMessages(conversationId);
 }
 
@@ -137,9 +137,28 @@ function pickMockReply(style: CommunicationStyle): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-async function fetchLiveReply(history: TherapyMessage[]): Promise<string> {
+/**
+ * There is no separate therapy endpoint: this reuses the backend's
+ * POST /companion/message, which takes only { conversationId?, messages,
+ * language } and answers { reply, riskFlagged, conversationId } (no
+ * { success, data } envelope). Consequently the conversation's style, preferred
+ * name and goal are NOT sent — the backend's system prompt is fixed — and the
+ * backend conversation id is remembered per therapy conversation so its replies
+ * stay in one server-side thread.
+ */
+async function fetchLiveReply(
+  conversationId: string,
+  history: TherapyMessage[],
+  language: 'ar' | 'en',
+): Promise<string> {
+  const serverKey = `${storageKeys.therapyServerConversationPrefix}${conversationId}`;
   const messages = history.slice(-MAX_HISTORY_SENT).map((m) => ({ role: m.role, content: m.content }));
-  const { data } = await apiClient.post<{ reply: string }>(config.companionApiPath, { messages });
+  const { data } = await apiClient.post<{ reply?: string; conversationId?: string }>(config.companionApiPath, {
+    messages,
+    language,
+    conversationId: storage.getJSON<string>(serverKey) ?? undefined,
+  });
+  if (data?.conversationId) storage.setJSON(serverKey, data.conversationId);
   return data?.reply?.trim() || 'أنا هون بسمعك. احكيلي أكتر عن اللي حاسس فيه.';
 }
 
@@ -151,7 +170,7 @@ async function streamOut(fullReply: string, onToken?: (partial: string) => void,
     streamed = streamed ? `${streamed} ${word}` : word;
     onToken(streamed);
     // eslint-disable-next-line no-await-in-loop
-    await fakeDelay(perWordMs);
+    await simulateLatency(perWordMs);
   }
 }
 
@@ -165,7 +184,8 @@ export interface SendResult {
 async function sendMessage(
   conversationId: string,
   text: string,
-  options: { onToken?: (partial: string) => void } = {},
+  // `language` is supplied by the caller — this module does not render.
+  options: { onToken?: (partial: string) => void; language?: 'ar' | 'en' } = {},
 ): Promise<SendResult> {
   const conversation = readConversations().find((c) => c.id === conversationId);
   const style: CommunicationStyle = conversation?.style ?? 'casual';
@@ -183,13 +203,13 @@ async function sendMessage(
   };
   writeMessages(conversationId, [...readMessages(conversationId), userMessage]);
 
-  await fakeDelay(riskDetected ? 300 : 500);
+  await simulateLatency(riskDetected ? 300 : 500);
 
   let fullReply: string;
   if (riskDetected) {
     fullReply = CRISIS_REPLY; // never route crisis language to the model
   } else if (config.featureFlags.aiCompanionLive) {
-    fullReply = await fetchLiveReply(readMessages(conversationId));
+    fullReply = await fetchLiveReply(conversationId, readMessages(conversationId), options.language ?? 'ar');
   } else {
     fullReply = pickMockReply(style);
   }

@@ -6,8 +6,8 @@ import { Screen, AppText, Button, SkeletonList, ErrorState } from '../../../../u
 import { useTheme } from '../../../../ui/theme';
 import { WaterFillGauge } from '../components/WaterFillGauge';
 import { useHydrationTodayQuery } from '../state/useHydrationQueries';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'HydrationHome'>;
 
@@ -35,7 +35,7 @@ export function HydrationHomeScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={3} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : query.data ? (
           <>
             <WaterFillGauge progress={query.data.totalMl / query.data.goalMl} />

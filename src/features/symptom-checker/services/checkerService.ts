@@ -1,8 +1,10 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
+import { parseContract } from '../../../core/api';
+import { simulateLatency } from '../../../core/async/simulateLatency';
 import { config } from '../../../config';
-import { AppError } from '../../../core/errors';
-import { containsRiskLanguage } from '../../ai-companion/models/riskDetection';
-import { rankConditions, type CheckerMethod, type CheckerSession, type ConditionMatch } from '../models/checkerContent';
+import { apiClient, fetchAllPages, unwrap, type ApiSuccess } from '../../../core/api';
+import { containsRiskLanguage } from '../../../domain/safety/riskDetection';
+import { rankConditions, type CheckerMethod, type CheckerSession, type ConditionMatch, CheckerSessionSchema } from '../models/checkerContent';
 
 /**
  * [ASSUMPTION] No backend / no clinical model exists (product-definition.md
@@ -14,9 +16,6 @@ import { rankConditions, type CheckerMethod, type CheckerSession, type Condition
  * the UI always routes flagged input to the real Safety resources.
  */
 
-function fakeDelay(ms = 400) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function readSessions(): CheckerSession[] {
   return storage.getJSON<CheckerSession[]>(storageKeys.mockCheckerSessions) ?? [];
@@ -48,7 +47,7 @@ export function flagsRisk(input: { freeText?: string; selfHarmReported?: boolean
 }
 
 async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
-  await fakeDelay(1200); // "Analyzing Data…"
+  await simulateLatency(1200); // "Analyzing Data…"
   const matches = rankConditions(input.symptomIds);
   const riskFlagged = flagsRisk(input);
   const session: CheckerSession = {
@@ -64,12 +63,55 @@ async function analyze(input: AnalyzeInput): Promise<AnalyzeResult> {
 }
 
 async function listSessions(): Promise<CheckerSession[]> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   return readSessions();
 }
 
-if (!config.useMockServices) {
-  throw new AppError('checkerService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
+// --- Real backend (config.useMockServices false) ----------------------------
+// /symptom-checker: POST { answers } · GET (paginated, newest first). The
+// backend only *records* a session and attaches a non-diagnostic placeholder
+// label — it does no condition matching — so `rankConditions` still runs in the
+// app and the outcome is saved as the session's answers (symptom ids are sent
+// comma-joined because answer values must be string/number/boolean). Free
+// text is scanned for risk language locally and never sent.
+
+interface ApiCheckerSession {
+  id: string;
+  createdAt: string;
+  answers: Record<string, string | number | boolean>;
 }
 
-export const checkerService = { analyze, listSessions };
+function fromApiSession(session: ApiCheckerSession): CheckerSession {
+  const { method, symptomIds, topConditionId, riskFlagged } = session.answers;
+  const mapped = {
+    id: session.id,
+    method: method as CheckerMethod,
+    createdAt: session.createdAt,
+    symptomIds: typeof symptomIds === 'string' && symptomIds ? symptomIds.split(',') : [],
+    topConditionId: typeof topConditionId === 'string' && topConditionId ? topConditionId : null,
+    riskFlagged: riskFlagged === true,
+  };
+
+  return parseContract(CheckerSessionSchema, mapped, 'GET /symptom-checker');
+}
+
+async function liveAnalyze(input: AnalyzeInput): Promise<AnalyzeResult> {
+  const matches = rankConditions(input.symptomIds);
+  const riskFlagged = flagsRisk(input);
+  const answers = {
+    method: input.method,
+    symptomIds: input.symptomIds.join(','),
+    topConditionId: matches[0]?.conditionId ?? '',
+    riskFlagged,
+  };
+  const session = unwrap(await apiClient.post<ApiSuccess<ApiCheckerSession>>('/symptom-checker', { answers }));
+  return { sessionId: session.id, matches, riskFlagged };
+}
+
+async function liveListSessions(): Promise<CheckerSession[]> {
+  return (await fetchAllPages<ApiCheckerSession>('/symptom-checker')).map(fromApiSession);
+}
+
+export const checkerService = config.useMockServices
+  ? { analyze, listSessions }
+  : { analyze: liveAnalyze, listSessions: liveListSessions };

@@ -1,7 +1,6 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
-import { AppError } from '../../../core/errors';
+import { simulateLatency } from '../../../core/async/simulateLatency';
 import { config } from '../../../config';
-import i18n from '../../../i18n';
 import { journalService } from '../../journal/services/journalService';
 import { moodService } from '../../mood/services/moodService';
 import { moodLevels } from '../../mood/models/moodContent';
@@ -31,19 +30,20 @@ import {
  * of what someone searched for is as revealing as the entries it found.
  */
 
-function fakeDelay(ms = 150) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function readRecent(): string[] {
   return storage.getJSON<string[]>(storageKeys.recentSearches) ?? [];
 }
 
-async function search(query: string, scope: SearchScope = 'all'): Promise<SearchResult[]> {
+/**
+ * `isArabic` is passed in rather than read from a global: this module does not
+ * render, so it cannot know the user's language, and importing i18n here pulls
+ * React Native into anything that tests it (docs/architecture-review.md §6.5).
+ */
+async function search(query: string, scope: SearchScope = 'all', isArabic = true): Promise<SearchResult[]> {
   const q = query.trim();
   if (q.length < MIN_QUERY_LENGTH) return [];
-  await fakeDelay();
-  const isArabic = i18n.language !== 'en';
+  await simulateLatency();
   const results: SearchResult[] = [];
 
   // --- The user's own content. ---
@@ -166,8 +166,7 @@ async function clearRecentSearches(): Promise<string[]> {
   return [];
 }
 
-if (!config.useMockServices) {
-  throw new AppError('searchService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
-}
+// Searches the (live-when-enabled) journal and mood services plus the bundled catalogues
+// on the client; the backend /search is not used.
 
 export const searchService = { search, getRecentSearches, rememberSearch, clearRecentSearches };

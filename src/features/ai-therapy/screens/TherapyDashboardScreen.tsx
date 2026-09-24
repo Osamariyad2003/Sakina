@@ -6,8 +6,8 @@ import { Screen, AppText, Card, Button, SkeletonList, ErrorState } from '../../.
 import { useTheme } from '../../../ui/theme';
 import { ConversationCard } from '../components/therapyBits';
 import { useTherapyConversationsQuery } from '../state/useTherapyQueries';
-import type { AppError } from '../../../core/errors';
 import type { CompanionStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<CompanionStackParamList, 'TherapyDashboard'>;
 
@@ -36,7 +36,7 @@ export function TherapyDashboardScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : (
           <>
             <Card elevation="md" style={{ backgroundColor: theme.colors.brand.primaryDark, alignItems: 'center', gap: theme.spacing.xxs }}>

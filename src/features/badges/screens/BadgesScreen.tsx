@@ -7,8 +7,8 @@ import { useTheme } from '../../../ui/theme';
 import { BadgeTile } from '../components/BadgeTile';
 import { useBadgesQuery, useCelebrateBadgesMutation } from '../state/useBadgeQueries';
 import { badgeCategories, type BadgeCategory } from '../models/badgeContent';
-import type { AppError } from '../../../core/errors';
 import type { ProfileStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Badges'>;
 
@@ -67,7 +67,7 @@ export function BadgesScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : visible.length === 0 ? (
           <EmptyState title={t('badges.noneInCategory')} />
         ) : (

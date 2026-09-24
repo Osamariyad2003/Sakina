@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Screen, AppText, Avatar, TextField, Button, useToast } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { useAuthStore } from '../../../core/auth/authStore';
+import { useUpdateDisplayNameMutation } from '../state/useProfileMutations';
 import type { ProfileStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'Profile'>;
 
@@ -16,12 +18,19 @@ export function ProfileScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const logout = useAuthStore((s) => s.logout);
+  const updateDisplayName = useUpdateDisplayNameMutation();
 
   const [name, setName] = useState(user?.displayName ?? '');
   const dirty = name.trim().length > 0 && name.trim() !== user?.displayName;
 
-  const saveName = () => {
+  const saveName = async () => {
     if (!dirty) return;
+    try {
+      await updateDisplayName.mutateAsync(name.trim());
+    } catch (error) {
+      toast.show({ message: errorText(error, t), tone: 'error' });
+      return;
+    }
     updateProfile({ displayName: name.trim() });
     toast.show({ message: t('profile.nameUpdated'), tone: 'success' });
   };

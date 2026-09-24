@@ -50,7 +50,19 @@
             "backgroundColor": "#1B1E1C"
           }
         }
-      ]
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "بدنا نستخدم المايكروفون عشان تقدر تحكي مع الرفيق بصوتك.",
+          "speechRecognitionPermission": "بدنا نستخدم التعرف على الصوت عشان نحول حكيك لنص.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ],
+      "./plugins/withRiveAndroidVersion.js",
+      "./plugins/withNdkVersion.js"
     ]
   }
 }

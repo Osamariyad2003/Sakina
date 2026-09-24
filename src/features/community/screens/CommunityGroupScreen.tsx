@@ -8,8 +8,8 @@ import { useTheme } from '../../../ui/theme';
 import { ThreadCard } from '../components/ThreadCard';
 import { useCommunityThreadsQuery, useCommunityProfileQuery } from '../state/useCommunityQueries';
 import { getGroup } from '../models/communityContent';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'CommunityGroup'>;
 
@@ -51,7 +51,7 @@ export function CommunityGroupScreen({ navigation, route }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : (query.data ?? []).length === 0 ? (
           <EmptyState
             title={t('community.noThreadsTitle')}

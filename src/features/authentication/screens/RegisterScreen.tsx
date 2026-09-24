@@ -9,8 +9,8 @@ import { PasswordField } from '../components/PasswordField';
 import { useTheme } from '../../../ui/theme';
 import { useRegisterMutation } from '../state/useAuthMutations';
 import { buildRegisterSchema, type RegisterFormValues } from '../validation/schemas';
-import type { AppError } from '../../../core/errors';
 import type { AuthStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -110,7 +110,7 @@ export function RegisterScreen({ navigation }: Props) {
             )}
           />
 
-          {mutation.isError ? <ErrorState message={(mutation.error as AppError).message} /> : null}
+          {mutation.isError ? <ErrorState message={errorText(mutation.error, t)} /> : null}
 
           <Button label={t('auth.registerButton')} onPress={handleSubmit(onSubmit)} loading={mutation.isPending} />
 

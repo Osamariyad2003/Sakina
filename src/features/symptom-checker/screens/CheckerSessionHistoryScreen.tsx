@@ -9,8 +9,8 @@ import { useTheme } from '../../../ui/theme';
 import { AnimatedLottie } from '../../../ui/lottie';
 import { useCheckerSessionsQuery } from '../state/useCheckerQueries';
 import { getCondition } from '../models/checkerContent';
-import type { AppError } from '../../../core/errors';
 import type { CompanionStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<CompanionStackParamList, 'CheckerSessionHistory'>;
 
@@ -37,7 +37,7 @@ export function CheckerSessionHistoryScreen({ navigation }: Props) {
           {query.isLoading ? (
             <SkeletonList rows={5} />
           ) : query.isError ? (
-            <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+            <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
           ) : sessions.length === 0 ? (
             <EmptyState
               title={t('checker.sessionHistoryEmptyTitle')}

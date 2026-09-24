@@ -624,3 +624,41 @@ The reference's bottom navigation is 5 icons plus a central create-FAB; Sakina
 keeps its 6 labelled tabs. Changing the tab bar is a product decision, not a
 parity fix, and the reference's "Stats" tab maps to Insights, which is still
 deferred from MVP.
+
+## Real backend integration (`EXPO_PUBLIC_LIVE_API=true`)
+
+One switch — `config.useMockServices` (true unless `EXPO_PUBLIC_LIVE_API=true`) — flips
+the app between its local mocks and the backend in `D:\Sakina-backend`
+(`EXPO_PUBLIC_API_BASE_URL`, e.g. `http://10.0.2.2:4000/api/v1` on the Android
+emulator). Contract: `Sakina-backend/API.md`; every response is
+`{ success, data }` / `{ success, error }` (`core/api/envelope.ts`).
+
+| Feature | With the real API on | Gap / lossy mapping |
+|---|---|---|
+| Auth, session refresh, logout | `/auth/*` (`authService`, `core/api/client.ts`) | Emailed reset link needs a deep link into `ResetPassword` (not built); session restore still trusts the cached profile |
+| Journal | `/journal` (`journalService`) | `promptId` isn't stored; `aiReflection` unsupported. Search stays client-side on purpose: the backend's `/journal/search` matches whole words only (no `work`→`working`, no Arabic `قلق`→`القلق`), which is worse for an Arabic-first, type-as-you-search UI |
+| Mood | `/mood` (`moodService`) | Emotions/triggers map by key via `core/api/catalog.ts`: dropped — emotions stressed/lonely/scared/excited, triggers study/relationships/unclear; `metrics.stress` is only kept as a low/medium/high band |
+| Stress check-ins | `/stress` (`stressCheckInService`) | Trigger mapping as above |
+| Hydration | `/hydration` (`hydrationService`) | Daily goal stays a local preference |
+| Sleep records | `/sleep` (`sleepService`) | Stage split / rating / suggestions are still derived from duration (illustrative); schedules + recommendation local |
+| Professionals + appointments | `/professionals`, `/appointments` (`professionalService`) | Backend lists **verified** professionals only (none until one is verified out-of-band); no availability endpoint, so the slot grid is still the app's illustrative one |
+| Symptom checker | `/symptom-checker` (`checkerService`) | Matching still runs in the app; the backend only stores the answers |
+| AI companion | `/companion/message` (`companionService`) | Needs `ANTHROPIC_API_KEY` on the backend |
+| Profile | `PATCH /profile`, `POST /profile/clear-data` (`profileService`) | — |
+| Home, Insights, Badges, Search | Computed client-side from the services above | Backend `/insights`, `/badges`, `/search` unused (different shape) |
+| Onboarding answers | `PUT /onboarding` once after login/register (`onboardingService`) | Push-only: answers are still collected and kept on the device first (onboarding precedes login); skipped if no goal was chosen (backend requires one); the three local answer maps are flattened into the backend's single `baseline` |
+| AI Therapy | `POST /companion/message` (`therapyService`) | Same AI as the Companion; the chat's style/name/goal aren't sent (fixed backend prompt); history stays on the device |
+| **Still mock-only** | Community, Notifications/Reminders, Resources/Workshops, Wellness + stress *technique* sessions | Backend lacks thread creation/support/report + "is mine" (community); inbox is server-created and reminder kinds differ (notifications); `/resources` is a flat list (resources); no session listing (wellness sessions) |
+
+## Unified AI companion — slice 1 (structured replies, opt-in context, safety)
+
+The AI work is being done incrementally. This slice changes the Companion's brain; the Figma-aligned redesign,
+voice/text conversation sharing, journal reflection, weekly reflection and Therapy unification are later slices.
+
+| Piece | Where | Notes |
+|---|---|---|
+| Server-side orchestrator | `Sakina-backend/src/modules/companion/services/orchestrator.service.js` | Safety decision → optional context → model → parsed structured reply. HIGH_RISK never reaches the model or the context builder. |
+| Opt-in personal context | `context.service.js` (backend), `useAiPersonalization` + `AIPersonalizationCard` (app) | Built server-side from the DB by the authenticated user id, so the client can't spoof it. Aggregates only (mood trend, top triggers, sleep/hydration averages, counts) — **no journal text or notes**. Off by default; the onboarding consent says data isn't shared, so this needs its own switch. Trends are only stated with ≥3 check-ins in each of two weeks, otherwise the prompt says "not enough data". |
+| Structured replies + actions | `actions.js`, `structuredReply.js`; app `aiActions.ts`, `AIActionRow` | Fixed whitelist of 8 action types mapped to screens that already exist (breathing/grounding exercise details, journal entry, mood check-in, sleep, symptom checker, professionals, safety). Model output is validated on the server and again in the app. |
+| Layered safety | `riskDetection.service.js` (backend), `riskDetection.ts` (app) | Arabic normalisation + Jordanian phrasing added (e.g. بدي أموت). The app checks first (offline-safe); the backend classifies independently and the app raises the crisis UI if either fires. Still a keyword placeholder, **not** a clinical model (Open Question #3). |
+| Not yet | — | Streaming endpoint stays plain text (no actions); persisted AI memory; Therapy still has its own chat logic; Companion ↔ voice share the service but not yet a server conversation; the Figma visual pass (blocked on Figma access) . |

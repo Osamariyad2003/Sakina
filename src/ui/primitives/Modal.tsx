@@ -20,7 +20,7 @@ export function AppModal({ visible, onClose, children }: AppModalProps) {
         accessibilityRole="button"
         accessibilityLabel="إغلاق"
       />
-      <View style={styles.centerWrap} pointerEvents="box-none">
+      <View style={styles.centerWrap}>
         <View
           style={{
             backgroundColor: theme.colors.background.surface,
@@ -38,5 +38,6 @@ export function AppModal({ visible, onClose, children }: AppModalProps) {
 }
 
 const styles = StyleSheet.create({
-  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  // box-none: the backdrop behind stays tappable, the dialog itself doesn't.
+  centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', pointerEvents: 'box-none' },
 });

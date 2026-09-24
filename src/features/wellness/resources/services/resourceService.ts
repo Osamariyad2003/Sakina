@@ -1,7 +1,6 @@
 import { storage, storageKeys } from '../../../../core/storage/mmkv';
+import { simulateLatency } from '../../../../core/async/simulateLatency';
 import { AppError } from '../../../../core/errors';
-import { config } from '../../../../config';
-import i18n from '../../../../i18n';
 import {
   resourceArticles,
   upcomingWorkshops,
@@ -22,9 +21,6 @@ import {
  * the workshop detail screen says exactly that. See ASSUMPTIONS.md.
  */
 
-function fakeDelay(ms = 200) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function readSaved(): string[] {
   return storage.getJSON<string[]>(storageKeys.savedResources) ?? [];
@@ -47,9 +43,9 @@ export interface ArticleFilter {
   search?: string;
 }
 
-async function listArticles(filter: ArticleFilter = {}): Promise<ResourceArticle[]> {
-  await fakeDelay();
-  const isArabic = i18n.language !== 'en';
+/** `isArabic` comes from the caller — see searchService for why. */
+async function listArticles(filter: ArticleFilter = {}, isArabic = true): Promise<ResourceArticle[]> {
+  await simulateLatency();
   const needle = filter.search?.trim().toLowerCase() ?? '';
   return resourceArticles.filter((article) => {
     if (filter.topic && article.topic !== filter.topic) return false;
@@ -62,27 +58,27 @@ async function listArticles(filter: ArticleFilter = {}): Promise<ResourceArticle
 }
 
 async function getArticleById(id: string): Promise<ResourceArticle> {
-  await fakeDelay(120);
+  await simulateLatency(120);
   const article = getArticle(id);
-  if (!article) throw new AppError(i18n.t('resources.articleNotFound'), 'unknown', 404);
+  if (!article) throw AppError.withKey('resources.articleNotFound', 'unknown', 404);
   return article;
 }
 
 async function listWorkshops(topic?: ResourceTopic | null): Promise<Workshop[]> {
-  await fakeDelay();
+  await simulateLatency();
   const upcoming = upcomingWorkshops();
   return topic ? upcoming.filter((w) => w.topic === topic) : upcoming;
 }
 
 async function getWorkshopById(id: string): Promise<Workshop> {
-  await fakeDelay(120);
+  await simulateLatency(120);
   const workshop = getWorkshop(id);
-  if (!workshop) throw new AppError(i18n.t('resources.workshopNotFound'), 'unknown', 404);
+  if (!workshop) throw AppError.withKey('resources.workshopNotFound', 'unknown', 404);
   return workshop;
 }
 
 async function listSaved(): Promise<{ articles: ResourceArticle[]; workshops: Workshop[] }> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   const savedIds = new Set(readSaved());
   return {
     articles: resourceArticles.filter((a) => savedIds.has(a.id)),
@@ -103,7 +99,7 @@ async function toggleSaved(id: string): Promise<boolean> {
 }
 
 async function listRegistrations(): Promise<Workshop[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   const ids = new Set(readRegistrations());
   return upcomingWorkshops().filter((w) => ids.has(w.id));
 }
@@ -113,9 +109,9 @@ async function isRegistered(workshopId: string): Promise<boolean> {
 }
 
 async function toggleRegistration(workshopId: string): Promise<boolean> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   if (!getWorkshop(workshopId)) {
-    throw new AppError(i18n.t('resources.workshopNotFound'), 'unknown', 404);
+    throw AppError.withKey('resources.workshopNotFound', 'unknown', 404);
   }
   const registrations = readRegistrations();
   const next = registrations.includes(workshopId)
@@ -125,12 +121,9 @@ async function toggleRegistration(workshopId: string): Promise<boolean> {
   return next.includes(workshopId);
 }
 
-if (!config.useMockServices) {
-  throw new AppError(
-    'resourceService: config.useMockServices=false but no real implementation is wired up yet.',
-    'unknown',
-  );
-}
+// Mock-only even with the real API on: the backend /resources is a flat title/body/tags
+// list with no topics, sections, workshops, saves or registrations, so the app's bundled
+// editorial content stays local.
 
 export const resourceService = {
   listArticles,

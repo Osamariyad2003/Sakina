@@ -5,20 +5,28 @@
  * → "Open Questions to Resolve Before SRS" for what each one is waiting on.
  */
 
+import { Platform } from 'react-native';
+
 export const config = {
   /**
-   * [ASSUMPTION] Real backend base URL is unknown (product-definition.md,
-   * Open Question #4/#8 — LLM/backend provider undecided). Override via
-   * EXPO_PUBLIC_API_BASE_URL at build time once a backend exists.
+   * Backend base URL (…/api/v1), set via EXPO_PUBLIC_API_BASE_URL at build time.
+   * The browser can't use the Android emulator's host alias (10.0.2.2), so web
+   * may set EXPO_PUBLIC_API_BASE_URL_WEB (e.g. http://localhost:27360/api/v1);
+   * it falls back to EXPO_PUBLIC_API_BASE_URL when unset.
    */
-  apiBaseUrl: process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://api.sakina.example/v1',
+  apiBaseUrl:
+    (Platform.OS === 'web' ? process.env.EXPO_PUBLIC_API_BASE_URL_WEB : undefined) ??
+    process.env.EXPO_PUBLIC_API_BASE_URL ??
+    'https://api.sakina.example/v1',
 
   /**
-   * While true, every features/*\/services implementation must use its mock
-   * branch instead of calling `apiClient`. Flip once a real backend + the
-   * open questions above are resolved.
+   * The single switch between the local mocks and the real backend. While
+   * true, every features/*\/services implementation uses its mock branch;
+   * when false they call `apiClient` (auth, journal, mood, …). Turn the real
+   * API on at build time with EXPO_PUBLIC_LIVE_API=true. Services with no
+   * backend counterpart (see ASSUMPTIONS.md) stay on their mock either way.
    */
-  useMockServices: true,
+  useMockServices: process.env.EXPO_PUBLIC_LIVE_API !== 'true',
 
   featureFlags: {
     /**
@@ -48,7 +56,8 @@ export const config = {
      * that holds the Anthropic key server-side — see `server/companion-proxy/`.
      * Override at build time with EXPO_PUBLIC_AI_COMPANION_LIVE=true.
      */
-    aiCompanionLive: process.env.EXPO_PUBLIC_AI_COMPANION_LIVE === 'true',
+    aiCompanionLive:
+      process.env.EXPO_PUBLIC_LIVE_API === 'true' || process.env.EXPO_PUBLIC_AI_COMPANION_LIVE === 'true',
   },
 
   /**

@@ -16,6 +16,7 @@ import { useTherapyChat } from '../state/useTherapyChat';
 import { useTherapyConversationsQuery } from '../state/useTherapyQueries';
 import type { TherapyMessage } from '../models/therapyContent';
 import type { CompanionStackParamList, AppTabsParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<CompanionStackParamList, 'TherapyConversation'>,
@@ -122,7 +123,7 @@ export function TherapyConversationScreen({ navigation, route }: Props) {
           {error ? (
             <View style={{ paddingVertical: theme.spacing.xs }}>
               <AppText variant="caption" color={theme.colors.status.error}>
-                {error.message || t('therapy.failedMessage')}
+                {errorText(error, t) || t('therapy.failedMessage')}
               </AppText>
               <Button label={t('therapy.retry')} variant="ghost" size="md" onPress={retry} />
             </View>

@@ -13,9 +13,10 @@ export const UserSchema = z.object({
   displayName: z.string(),
   email: z.string().email().optional(),
   language: z.enum(['ar', 'en']).default('ar'),
-  createdAt: z.string(),
+  /** Not returned by the auth endpoints — only set by the local mock. */
+  createdAt: z.string().optional(),
 });
-export type User = z.infer<typeof UserSchema>;
+export type User =z.infer<typeof UserSchema>;
 
 export const EmotionSchema = z.object({
   id: z.string(),
@@ -63,6 +64,24 @@ export const MoodEntrySchema = z.object({
 });
 export type MoodEntry = z.infer<typeof MoodEntrySchema>;
 
+/**
+ * Self-reported (never measured/inferred) stress level — the same
+ * "user-set, not measured" posture as Home's stress tracker row. Three
+ * plain levels rather than Mood's five, matching the reference's
+ * segmented-meter granularity.
+ */
+export const StressLevelSchema = z.enum(['low', 'medium', 'high']);
+export type StressLevel = z.infer<typeof StressLevelSchema>;
+
+export const StressEntrySchema = z.object({
+  id: z.string(),
+  level: StressLevelSchema,
+  triggerIds: z.array(z.string()).default([]),
+  note: z.string().optional(),
+  createdAt: z.string(),
+});
+export type StressEntry = z.infer<typeof StressEntrySchema>;
+
 export const JournalEntrySchema = z.object({
   id: z.string(),
   title: z.string().optional(),
@@ -74,6 +93,22 @@ export const JournalEntrySchema = z.object({
 });
 export type JournalEntry = z.infer<typeof JournalEntrySchema>;
 
+/** What the companion can offer as a button under a reply; the backend enforces this same whitelist. */
+export const AIActionTypeSchema = z.enum([
+  'breathing',
+  'grounding',
+  'journal',
+  'mood_checkin',
+  'symptom_checker',
+  'sleep',
+  'professionals',
+  'safety',
+]);
+export type AIActionType = z.infer<typeof AIActionTypeSchema>;
+
+export const AIActionSchema = z.object({ type: AIActionTypeSchema, label: z.string() });
+export type AIAction = z.infer<typeof AIActionSchema>;
+
 export const ChatMessageSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
@@ -82,6 +117,8 @@ export const ChatMessageSchema = z.object({
   createdAt: z.string(),
   /** True while an assistant message is still streaming in. */
   streaming: z.boolean().optional(),
+  /** Suggested next steps the companion attached to this (assistant) reply. */
+  actions: z.array(AIActionSchema).optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
@@ -126,6 +163,24 @@ export const SessionModeSchema = z.enum(['video', 'phone', 'inPerson']);
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
 /**
+ * Curated image attached to a backend entity — mirrors the `image*` columns
+ * (see the backend's `ImageSource` enum). Rendered by the `ContentImage`
+ * primitive; `Avatar` takes the resolved uri.
+ */
+export const ContentImageSchema = z.object({
+  url: z.string().optional(),
+  thumbUrl: z.string().optional(),
+  /** BlurHash shown while the full image loads. */
+  blurHash: z.string().optional(),
+  altAr: z.string().optional(),
+  altEn: z.string().optional(),
+  source: z.enum(['unsplash', 'upload']).optional(),
+  authorName: z.string().optional(),
+  authorUrl: z.string().optional(),
+});
+export type ContentImage = z.infer<typeof ContentImageSchema>;
+
+/**
  * [ASSUMPTION] Vetting/licensing fields shaped per product-definition.md
  * Open Question #2 (who vets professionals, and against which register).
  * `licenceNumber`/`verified` are carried so the UI can be honest about
@@ -138,7 +193,9 @@ export const ProfessionalSchema = z.object({
   titleEn: z.string(),
   bioAr: z.string().optional(),
   bioEn: z.string().optional(),
+  /** @deprecated superseded by `image`; still populated from the backend's legacy `photoUrl`. */
   photoUrl: z.string().optional(),
+  image: ContentImageSchema.optional(),
   /** Specialty ids from professionalContent.specialtyCatalog. */
   specialtyIds: z.array(z.string()).default([]),
   /** Language codes the professional practises in. */

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, KeyboardAvoidingView, Platform } from 'react-native';
+import { Alert, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -13,8 +13,13 @@ import { TypingIndicator } from '../components/TypingIndicator';
 import { ChatInput } from '../components/ChatInput';
 import { SuggestedPrompts } from '../components/SuggestedPrompts';
 import { SafetyBanner } from '../../safety/components/SafetyBanner';
-import type { ChatMessage } from '../../../types/models';
+import { CompanionVoicePanel } from '../components/CompanionVoicePanel';
+import { AIActionRow } from '../components/AIActionRow';
+import { AIPersonalizationCard } from '../components/AIPersonalizationCard';
+import { resolveActionRoute } from '../models/aiActions';
+import type { AIAction, ChatMessage } from '../../../types/models';
 import type { CompanionStackParamList, AppTabsParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<CompanionStackParamList, 'Conversation'>,
@@ -33,8 +38,34 @@ type ListItem = ChatMessage | { id: 'typing-indicator'; kind: 'typing' };
 export function ConversationScreen({ navigation }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
-  const { messages, status, error, riskDetected, suggestion, send, retry } = useCompanionChat();
+  const { messages, status, error, riskDetected, suggestion, send, retry, clear } = useCompanionChat();
   const [bannerDismissed, setBannerDismissed] = React.useState(false);
+
+  // Suggested actions are shown only under the latest assistant reply, so older ones don't pile up.
+  const lastAssistantId = useMemo(() => [...messages].reverse().find((m) => m.role === 'assistant')?.id, [messages]);
+
+  const openAction = (action: AIAction) => {
+    const route = resolveActionRoute(action);
+    if (!route) return;
+    if (route.kind === 'companion') {
+      navigation.navigate(route.screen);
+      return;
+    }
+    // Tab + nested screen names come from the fixed whitelist in aiActions.ts, not from the network.
+    (navigation.navigate as (tab: string, params: object) => void)(route.tab, { screen: route.screen, params: route.params });
+  };
+
+  const confirmClear = () => {
+    // react-native-web's Alert.alert is a no-op, so use the browser dialog there.
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${t('companion.clearConfirmTitle')}\n\n${t('companion.clearConfirmMessage')}`)) void clear();
+      return;
+    }
+    Alert.alert(t('companion.clearConfirmTitle'), t('companion.clearConfirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('companion.clearConfirmCta'), style: 'destructive', onPress: () => void clear() },
+    ]);
+  };
 
   React.useEffect(() => {
     if (riskDetected) setBannerDismissed(false);
@@ -54,17 +85,30 @@ export function ConversationScreen({ navigation }: Props) {
       <View style={{ paddingHorizontal: theme.spacing.md, paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.xs }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <AppText variant="titleLg">{t('tabs.companion')}</AppText>
-          <Button
-            label={t('checker.launchCta')}
-            variant="ghost"
-            size="md"
-            onPress={() => navigation.navigate('SymptomCheckerIntro')}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {messages.length > 0 ? (
+              <Button
+                label={t('companion.clearHistory')}
+                variant="ghost"
+                size="md"
+                disabled={status === 'sending' || status === 'streaming'}
+                onPress={confirmClear}
+              />
+            ) : null}
+            <Button
+              label={t('checker.launchCta')}
+              variant="ghost"
+              size="md"
+              onPress={() => navigation.navigate('SymptomCheckerIntro')}
+            />
+          </View>
         </View>
         <AppText variant="caption" color={theme.colors.text.secondary}>
           {t('companion.disclaimer')}
         </AppText>
       </View>
+
+      <CompanionVoicePanel onCrisis={() => navigation.navigate('ProfileTab', { screen: 'Safety' })} />
 
       {showSafetyBanner ? (
         <SafetyBanner
@@ -107,6 +151,7 @@ export function ConversationScreen({ navigation }: Props) {
                   {t('companion.emptyBody')}
                 </AppText>
               </View>
+              <AIPersonalizationCard />
               <SuggestedPrompts onSelect={send} />
             </View>
           ) : (
@@ -114,13 +159,19 @@ export function ConversationScreen({ navigation }: Props) {
               data={data}
               maintainVisibleContentPosition={{ startRenderingFromBottom: true, autoscrollToBottomThreshold: 0.2 }}
               keyExtractor={(item) => item.id}
+              extraData={lastAssistantId}
               renderItem={({ item }) =>
                 'kind' in item ? (
                   <TypingIndicator />
                 ) : item.role === 'user' ? (
                   <UserMessageBubble content={item.content} />
                 ) : (
-                  <AIMessageBubble content={item.content} streaming={item.streaming} />
+                  <View>
+                    <AIMessageBubble content={item.content} streaming={item.streaming} />
+                    {item.id === lastAssistantId && !item.streaming ? (
+                      <AIActionRow actions={item.actions} onSelect={openAction} />
+                    ) : null}
+                  </View>
                 )
               }
             />
@@ -129,7 +180,7 @@ export function ConversationScreen({ navigation }: Props) {
           {error ? (
             <View style={{ paddingVertical: theme.spacing.xs }}>
               <AppText variant="caption" color={theme.colors.status.error}>
-                {error.message || t('companion.failedMessage')}
+                {errorText(error, t) || t('companion.failedMessage')}
               </AppText>
               <Button label={t('companion.retry')} variant="ghost" size="md" onPress={retry} />
             </View>

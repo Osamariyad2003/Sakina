@@ -20,12 +20,24 @@ export const storageKeys = {
   mockMoodEntries: 'mock.mood.entries',
   /** [ASSUMPTION] Mock-backend-only chat history — see features/ai-companion/services/companionService.ts. */
   mockChatMessages: 'mock.companion.messages',
+  /** Backend conversation id for the Companion chat, so replies continue one server-side thread. */
+  companionServerConversationId: 'companion.serverConversationId',
+  /** Opt-in for personalised AI replies (a preference, not content — kept by "Clear my data"). */
+  aiPersonalization: 'ai.personalization',
   /** [ASSUMPTION] Mock-backend-only journal entries — see features/journal/services/journalService.ts. */
   mockJournalEntries: 'mock.journal.entries',
   /** [ASSUMPTION] Mock-backend-only stress-session records — see features/wellness/stress-management/services/stressService.ts. */
   mockStressSessions: 'mock.stress.sessions',
-  /** [ASSUMPTION] Self-reported (never measured/inferred) daily stress-level entries — see features/home/services/homeService.ts. */
-  selfReportedStressLevels: 'mock.home.stressLevels',
+  /** [ASSUMPTION] Mock-backend-only general Wellness exercise completions — see features/wellness/services/wellnessSessionService.ts. */
+  mockWellnessSessions: 'mock.wellness.sessions',
+  /**
+   * [ASSUMPTION] Self-reported (never measured/inferred) stress check-ins
+   * (level + optional triggers/note) — see
+   * features/wellness/stress-management/services/stressCheckInService.ts.
+   * Home's quick stress-level widget writes here too, so there is one
+   * store for "today's stress" rather than two that could drift apart.
+   */
+  mockStressEntries: 'mock.stress.entries',
   /** [ASSUMPTION] Mock-backend-only hydration logs — see features/wellness/hydration/services/hydrationService.ts. */
   mockHydrationLogs: 'mock.hydration.logs',
   /** User-set daily hydration goal (ml) — not mock data, a real local preference. */
@@ -40,6 +52,8 @@ export const storageKeys = {
   mockTherapyConversations: 'mock.therapy.conversations',
   /** Prefix for per-conversation therapy messages (`mock.therapy.messages.<conversationId>`). */
   therapyMessagesPrefix: 'mock.therapy.messages.',
+  /** Per-therapy-conversation backend conversation id (suffix = local conversation id). */
+  therapyServerConversationPrefix: 'therapy.serverConversationId.',
   /** Recent global-search terms (a local convenience, not content). */
   recentSearches: 'search.recent',
   /** [ASSUMPTION] Mock-backend-only in-app notification inbox — see features/notifications/services/notificationService.ts. */
@@ -50,6 +64,8 @@ export const storageKeys = {
   mockAppointments: 'mock.professional.appointments',
   /** Article/workshop ids the user saved for later — a real local preference. */
   savedResources: 'resources.saved',
+  /** Last-seen content imagery (articles/exercises), so a cold offline start still shows pictures. */
+  contentImages: 'content.images',
   /** Workshop ids the user registered for — [ASSUMPTION] mock-backend-only, no real registration API. */
   mockWorkshopRegistrations: 'mock.resources.workshopRegistrations',
   /** [ASSUMPTION] Mock-backend-only community posts the user wrote — see features/community/services/communityService.ts. */
@@ -98,9 +114,11 @@ export const storage = {
 export function clearAllLocalContentData() {
   mmkv.remove(storageKeys.mockMoodEntries);
   mmkv.remove(storageKeys.mockChatMessages);
+  mmkv.remove(storageKeys.companionServerConversationId);
   mmkv.remove(storageKeys.mockJournalEntries);
   mmkv.remove(storageKeys.mockStressSessions);
-  mmkv.remove(storageKeys.selfReportedStressLevels);
+  mmkv.remove(storageKeys.mockStressEntries);
+  mmkv.remove(storageKeys.mockWellnessSessions);
   mmkv.remove(storageKeys.mockHydrationLogs);
   mmkv.remove(storageKeys.mockSleepRecords);
   mmkv.remove(storageKeys.mockCheckerSessions);
@@ -108,6 +126,7 @@ export function clearAllLocalContentData() {
   const therapyConversations = storage.getJSON<{ id: string }[]>(storageKeys.mockTherapyConversations) ?? [];
   for (const conversation of therapyConversations) {
     mmkv.remove(`${storageKeys.therapyMessagesPrefix}${conversation.id}`);
+    mmkv.remove(`${storageKeys.therapyServerConversationPrefix}${conversation.id}`);
   }
   mmkv.remove(storageKeys.mockTherapyConversations);
   mmkv.remove(storageKeys.onboardingAnswers);

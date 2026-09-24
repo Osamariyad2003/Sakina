@@ -1,4 +1,4 @@
-import type { WellnessCategory } from '../../../types/models';
+import type { ContentImage, WellnessCategory } from '../../../types/models';
 
 /**
  * [ASSUMPTION] Neither spec provides real exercise content — this is
@@ -24,6 +24,8 @@ export interface WellnessExerciseContent {
   kind: 'breathing' | 'guided';
   breathingPattern?: BreathingPattern;
   steps?: { textAr: string; textEn: string }[];
+  /** Curated thumbnail. Absent on most exercises — the card then renders text-only. */
+  image?: ContentImage;
 }
 
 export const wellnessExercises: WellnessExerciseContent[] = [

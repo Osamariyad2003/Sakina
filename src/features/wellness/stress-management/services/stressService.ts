@@ -1,6 +1,5 @@
 import { storage, storageKeys } from '../../../../core/storage/mmkv';
-import { AppError } from '../../../../core/errors';
-import { config } from '../../../../config';
+import { simulateLatency } from '../../../../core/async/simulateLatency';
 import { stressTechniques, type StressSession } from '../models/stressContent';
 import type { WellnessExerciseContent } from '../../models/wellnessContent';
 
@@ -25,12 +24,9 @@ function writeSessions(sessions: StressSession[]) {
   storage.setJSON(storageKeys.mockStressSessions, sessions);
 }
 
-function fakeDelay(ms = 300) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function listTechniques(): Promise<WellnessExerciseContent[]> {
-  await fakeDelay();
+  await simulateLatency();
   return stressTechniques;
 }
 
@@ -41,7 +37,7 @@ export interface CreateStressSessionInput {
 }
 
 async function createSession(input: CreateStressSessionInput): Promise<StressSession> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   const now = new Date().toISOString();
   const session: StressSession = {
     id: `stress-session-${Date.now()}`,
@@ -58,12 +54,11 @@ async function createSession(input: CreateStressSessionInput): Promise<StressSes
 
 /** Read back completed sessions — used by Home's "wellness minutes" tracker signal. */
 async function listSessions(): Promise<StressSession[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   return readSessions();
 }
 
-if (!config.useMockServices) {
-  throw new AppError('stressService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
-}
+// Mock-only even with the real API on: technique sessions have no backend counterpart (see
+// wellnessSessionService). Self-reported stress levels live in stressCheckInService.
 
 export const stressService = { listTechniques, createSession, listSessions };

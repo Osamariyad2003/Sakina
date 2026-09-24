@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen, AppText, Card, Button, TextField, TextArea, Chip, SegmentedControl, IconButton } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { RiskSupportCard } from '../components/CheckerBits';
-import { containsRiskLanguage } from '../../ai-companion/models/riskDetection';
+import { containsRiskLanguage } from '../../../domain/safety/riskDetection';
 import { useCheckerStore } from '../state/useCheckerStore';
 import { checkerEmotions, physicalSymptomCatalog, medicationCatalog } from '../models/checkerContent';
 import type { CompanionStackParamList, AppTabsParamList } from '../../../navigation/types';

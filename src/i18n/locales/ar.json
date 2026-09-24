@@ -1,5 +1,6 @@
 {
   "common": {
+    "photoCredit": "تصوير: {{name}}",
     "next": "التالي",
     "back": "رجوع",
     "cancel": "إلغاء",
@@ -8,6 +9,7 @@
     "loading": "جارٍ التحميل...",
     "skip": "تخطي",
     "done": "تم",
+    "continue": "متابعة",
     "showPassword": "إظهار كلمة السر",
     "hidePassword": "إخفاء كلمة السر"
   },
@@ -20,6 +22,7 @@
     "profile": "حسابي"
   },
   "home": {
+    "metricsSectionTitle": "مؤشرات الصحة النفسية",
     "greetingMorning": "صباح الخير",
     "checkInPrompt": "كيف حاسس اليوم؟",
     "checkInSubtitle": "خذ لحظة واحكيلنا عن شعورك.",
@@ -30,6 +33,16 @@
     "searchPlaceholder": "دور بمذكراتك...",
     "reflectionCardTitle": "انعكاس حالتك",
     "moodSummaryCardTitle": "المزاج، آخر 7 أيام",
+    "stressSummaryCardTitle": "التوتر، آخر 7 أيام",
+    "sleepSummaryCardTitle": "النوم، آخر 7 ليالٍ",
+    "combinedMetricsTitle": "المزاج والنوم والتوتر",
+    "combinedMoodLabel": "مزاج اليوم",
+    "combinedSleepLabel": "متوسط النوم",
+    "combinedSleepHours": "{{hours}} س",
+    "combinedSleepCaption": "آخر 7 ليالٍ",
+    "combinedStressLabel": "توتر اليوم",
+    "combinedNoDataYet": "ما سجّلت لسه",
+    "combinedCorrelationSleepStress": "توترك بيكون أعلى بالليالي اللي بتنام فيها أقل.",
     "journalingDaysChip": "كتبت {{count}} أيام",
     "stressSessionsChip": "{{count}} تمارين هدوء",
     "streakChip": "{{count}} أيام متتالية",
@@ -47,9 +60,27 @@
       "stressLevelPrompt": "كيف تحدد مستوى الضغط عندك هلأ؟ إنت اللي بتحدده — ما في شي بينقاس تلقائياً."
     },
     "seeAll": "عرض الكل",
-    "checkInLoggedTitle": "سجّلت اليوم: {{mood}}"
+    "checkInLoggedTitle": "سجّلت اليوم: {{mood}}",
+    "insightsCardTitle": "تحليلاتك",
+    "insightsCardSubtitle": "شوف اتجاهات وأنماط مزاجك"
   },
   "companion": {
+    "personalizeTitle": "ردود مخصّصة إلك",
+    "personalizeBody": "بتخلّي الرفيق يستعين بملخّص قصير عن مزاجك ونومك وضغطك وشربك للمي وأهدافك عشان تكون ردوده أقرب إلك. كتاباتك بالمذكرات ما بتنشارك أبداً. مطفية من الأساس وفيك تطفيها بأي وقت.",
+    "actions": {
+      "breathing": "جرّب تمرين تنفس",
+      "grounding": "جرّب تمرين تأريض",
+      "journal": "اكتب عنها",
+      "mood_checkin": "سجّل مزاجك",
+      "symptom_checker": "استكشف الأعراض",
+      "sleep": "ساعدني بالنوم",
+      "professionals": "تواصل مع مختص",
+      "safety": "الدعم والطوارئ"
+    },
+    "clearHistory": "مسح المحادثة",
+    "clearConfirmTitle": "مسح هالمحادثة؟",
+    "clearConfirmMessage": "رح تنمسح المحادثة من جهازك وتبلش محادثة جديدة. الرسائل القديمة بتضل على السيرفر لحد ما تستخدم الخصوصية ← مسح بياناتي.",
+    "clearConfirmCta": "مسح",
     "suggestedPrompt1": "حاسس بضغط اليوم",
     "suggestedPrompt2": "بدي أحكي عن شيء مضايقني",
     "suggestedPrompt3": "ساعدني أفهم شعوري",
@@ -67,7 +98,26 @@
     "riskBannerCta": "افتح صفحة الدعم",
     "stressSuggestionTitle": "حاسس إنه في ضغط عليك؟",
     "stressSuggestionBody": "فيك تجرب تمرين قصير لتفريغ الضغط — بياخد بس دقيقتين.",
-    "stressSuggestionCta": "افتح إدارة الضغط"
+    "stressSuggestionCta": "افتح إدارة الضغط",
+    "voice": {
+      "micIdleLabel": "احكي مع الرفيق بصوتك",
+      "micListeningLabel": "عم بسمعك... اضغط لتوقف",
+      "micReflectingLabel": "الرفيق عم يفكر",
+      "micSpeakingLabel": "الرفيق عم يحكي... اضغط لتوقف",
+      "listeningHint": "عم بسمعك...",
+      "reflectingHint": "لحظة...",
+      "speakingHint": "الرفيق عم يحكي",
+      "transcriptPlaceholder": "شو ما حكيت رح يظهر هون",
+      "permissionDenied": "بدنا إذن المايكروفون عشان تقدر تحكي مع الرفيق بصوتك.",
+      "unavailable": "ميزة الصوت مش متوفرة هلأ. جرب تكتب رسالتك.",
+      "error": "صار في مشكلة بالصوت. حاول مرة ثانية."
+    },
+    "crisis": {
+      "recededTitle": "خلينا نركز على الدعم الفوري",
+      "recededBody": "فتحنالك صفحة الدعم والطوارئ. الرفيق هون رح يستنى — رجعلي وقت ما تكون جاهز.",
+      "reachHumanCta": "تواصل مع إنسان",
+      "returnCta": "رجعت، بدي أكمل"
+    }
   },
   "checker": {
     "homeCardTitle": "فاحص الأعراض الذكي",
@@ -415,8 +465,38 @@
     }
   },
   "insights": {
-    "supportiveExampleTitle": "يبدو إن الأيام الماضية كانت أصعب شوي.",
-    "supportiveExampleBody": "خلينا نشوف شو الأشياء اللي ممكن تساعدك."
+    "title": "تحليلاتك",
+    "subtitle": "أنماط من تسجيلات مزاجك ويومياتك، دايماً بصفك — مش حكم عليك.",
+    "emptyTitle": "ما في تحليلات لسه",
+    "emptyBody": "سجّل مزاجك كم مرة وبتبدأ تظهر أنماطك هون.",
+    "trendTitle": "اتجاه المزاج، آخر 7 أيام",
+    "weeklyChangeTitle": "هالأسبوع",
+    "statCheckIns": "تسجيلات",
+    "statVsLastWeek": "مقارنة بالأسبوع الماضي",
+    "statImprovement": "تحسّن",
+    "frequentEmotionsTitle": "المشاعر المتكررة",
+    "frequentEmotionsEmpty": "سجّل كم مزاج كمان عشان نعرض مشاعرك المتكررة.",
+    "commonTriggersTitle": "الأسباب المتكررة",
+    "commonTriggersEmpty": "ضيف سبب على تسجيلاتك عشان نعرض أسبابك المتكررة.",
+    "positivePatternsTitle": "أنماط إيجابية",
+    "patternStreak": "{{count}} يوم متواصل من التسجيل — استمر هيك.",
+    "patternBestDay": "بتحس بأحسن حالتك يوم {{day}} عادةً.",
+    "patternTopEmotion": "شعور \"{{emotion}}\" كان الأكتر تكراراً هالأسبوع.",
+    "patternJournaling": "كتبت بيومياتك {{count}} مرة هالأسبوع — عادة تأمل حلوة.",
+    "suggestionLabel": "اقتراح مخصّص إلك",
+    "suggestionCta": "اعرف أكتر",
+    "journalSnapshotTitle": "اليوميات",
+    "journalSnapshotBody": "{{count}} تدوينة هالأسبوع · {{total}} إجمالاً",
+    "wellnessCta": "جرّب تمرين تهدئة",
+    "weekday": {
+      "0": "الأحد",
+      "1": "الإثنين",
+      "2": "الثلاثاء",
+      "3": "الأربعاء",
+      "4": "الخميس",
+      "5": "الجمعة",
+      "6": "السبت"
+    }
   },
   "auth": {
     "welcomeTitle": "سكينة",
@@ -441,6 +521,7 @@
     "createOne": "أنشئ واحد",
     "forgotPasswordLink": "نسيت كلمة السر؟",
     "resetLinkSentTitle": "تم إرسال الرابط",
+    "resetLinkSentBodyLive": "إذا كان في حساب بهذا البريد، بعتنا لك رابط لإعادة تعيين كلمة السر. شيّك على بريدك.",
     "resetLinkSentBody": "افتح الرابط لإكمال إعادة تعيين كلمة السر. (نسخة تجريبية: بننقلك مباشرة)",
     "resetSuccessTitle": "تم تحديث كلمة السر",
     "resetSuccessBody": "فيك تسجل الدخول الآن بكلمة السر الجديدة.",
@@ -457,6 +538,7 @@
   },
   "errors": {
     "network": "تعذر الاتصال بالإنترنت. تأكد من اتصالك وحاول مرة ثانية.",
+    "rateLimited": "محاولات كثيرة. استنى شوي وحاول مرة ثانية.",
     "sessionExpired": "انتهت جلستك. الرجاء تسجيل الدخول مرة ثانية.",
     "validation": "الرجاء التحقق من البيانات المدخلة.",
     "server": "صار في خطأ من طرفنا. حاول بعد شوي.",
@@ -497,7 +579,11 @@
     "finish": "إنهاء",
     "completionTitle": "خلصت التمرين 🌿",
     "completionBody": "خذيت خطوة صغيرة لنفسك اليوم. كيف حاسس هلأ؟",
-    "repeat": "كرر التمرين"
+    "repeat": "كرر التمرين",
+    "mindfulMinutesTitle": "دقايق التأمل",
+    "mindfulMinutesValue": "{{count}} دقيقة من التأمل والتنفس والاسترخاء",
+    "mindfulStreakValue": "{{count}} يوم متواصل",
+    "mindfulStreakEmpty": "مارس اليوم عشان تبدأ سلسلة أيام متواصلة"
   },
   "hydration": {
     "title": "شرب الماء",
@@ -664,7 +750,40 @@
     "moodCheckInPrompt": "كيف حاسس هلأ، بعد التمرين؟",
     "openJournalCta": "افتح اليوميات",
     "highStressNudgeTitle": "لسه حاسس بضغط كتير؟",
-    "highStressNudgeBody": "ولا يهمك — الدعم موجود إلك دايماً وقت ما تحتاجه."
+    "highStressNudgeBody": "ولا يهمك — الدعم موجود إلك دايماً وقت ما تحتاجه.",
+    "logStressCta": "سجّل مستوى توترك",
+    "viewHistoryCta": "سجل التوتر"
+  },
+  "stressCheckIn": {
+    "levelTitle": "قديش حاسس متوتر هلأ؟",
+    "levelLow": "منخفض",
+    "levelMedium": "متوسط",
+    "levelHigh": "مرتفع",
+    "triggerQuestion": "شو السبب، إذا في؟",
+    "optionalHint": "اختياري — فيك تختار أكتر من سبب.",
+    "noteQuestion": "بدك تضيف شي؟",
+    "notePlaceholder": "اكتب أي شيء حابب تسجله... (اختياري)",
+    "saveCta": "سجّل التوتر",
+    "savedTitle": "تم حفظ تسجيل التوتر",
+    "savedBody": "شكراً إنك خذيت هالوقفة الصغيرة مع نفسك.",
+    "greatThanks": "تمام، شكراً!",
+    "historyTitle": "سجل التوتر",
+    "trendTitle": "اتجاه التوتر، آخر 7 أيام",
+    "recentTitle": "آخر التسجيلات",
+    "emptyTitle": "ما في تسجيلات توتر لسه",
+    "emptyBody": "سجّل قديش حاسس متوتر عشان تبدأ تشوف أنماطك.",
+    "newCheckIn": "سجّل التوتر",
+    "totalCheckIns": "{{count}} تسجيل توتر لحد هلأ.",
+    "detailTitle": "تسجيل التوتر",
+    "notFound": "ما لقينا هالتسجيل",
+    "deleteFromHistory": "احذف من السجل",
+    "suggestedNextStep": "الخطوة المقترحة",
+    "openSuggestion": "شوف الاقتراح",
+    "suggestionLabel": "اقتراح مخصّص إلك",
+    "suggestionCta": "جرّب هالتمرين",
+    "suggestionNotFound": "ما لقينا هالاقتراح",
+    "minutesMetric": "دقايق",
+    "overviewSectionTitle": "نظرة عامة"
   },
   "onboarding": {
     "introTitle": "إنت مو لحالك",
@@ -674,7 +793,15 @@
     "consentTitle": "خصوصيتك أولوية",
     "consentBody": "بياناتك خاصة فيك — مزاجك، مذكراتك، ومحادثاتك مع الرفيق ما بيوصلها حدا غيرك. لازم نوافق سوا قبل ما نبدأ نسجل أي معلومة عن مشاعرك.",
     "consentAgree": "موافق على سياسة الخصوصية",
-    "consentCta": "خلينا نبدأ"
+    "consentCta": "خلينا نبدأ",
+    "stepIndicator": "خطوة {{current}} من {{total}}",
+    "skipAssessmentCta": "تخطي هلأ",
+    "skipAssessmentConfirmTitle": "بدك تتخطى التقييم؟",
+    "skipAssessmentConfirmBody": "فيك دايماً تجاوب عليها بعدين من صفحتك الشخصية. أي إجابة سجلتها لسه محفوظة.",
+    "summaryTitle": "شكراً إنك شاركتنا",
+    "summaryBody": "هاي نقطة بداية بسيطة بناءً على إجاباتك — مش تشخيص، بس اقتراح لطيف.",
+    "summarySuggestionLabel": "مكان حلو تبدأ منه",
+    "summaryMoodSeeded": "سجّلنا مزاجك اليوم بناءً على إجاباتك — فيك دايماً تعدّله أو تحذفه من صفحة المزاج."
   },
   "profile": {
     "title": "حسابي",

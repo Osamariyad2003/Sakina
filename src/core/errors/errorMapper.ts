@@ -19,6 +19,9 @@ export function mapError(error: unknown): AppError {
 
     const status = error.response.status;
 
+    if (status === 429) {
+      return new AppError(i18n.t('errors.rateLimited'), 'server', status);
+    }
     if (status === 401) {
       return new AppError(i18n.t('errors.sessionExpired'), 'sessionExpired', status);
     }

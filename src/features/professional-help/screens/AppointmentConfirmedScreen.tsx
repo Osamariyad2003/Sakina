@@ -3,11 +3,11 @@ import { View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
+import { errorText } from '../../../core/errors';
 import { Screen, AppText, Card, Button, LoadingState, ErrorState } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { AppointmentCard } from '../components/AppointmentCard';
 import { useAppointmentQuery } from '../state/useProfessionalQueries';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList } from '../../../navigation/types';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'AppointmentConfirmed'>;
@@ -28,7 +28,7 @@ export function AppointmentConfirmedScreen({ navigation, route }: Props) {
     return (
       <Screen>
         <ErrorState
-          message={(query.error as AppError)?.message ?? t('professionals.appointmentNotFound')}
+          message={query.error ? errorText(query.error, t) : t('professionals.appointmentNotFound')}
           onRetry={() => query.refetch()}
         />
       </Screen>

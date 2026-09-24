@@ -111,8 +111,11 @@ export function AnimatedSplash({ ready, onExitComplete }: AnimatedSplashProps) {
 
   return (
     <Animated.View
-      pointerEvents={ready ? 'none' : 'auto'}
-      style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.background.primary }, overlayStyle]}
+      style={[
+        StyleSheet.absoluteFill,
+        { backgroundColor: theme.colors.background.primary, pointerEvents: ready ? 'none' : 'auto' },
+        overlayStyle,
+      ]}
     >
       <View style={styles.center}>
         <Animated.View style={[styles.haloWrap, contentStyle]}>

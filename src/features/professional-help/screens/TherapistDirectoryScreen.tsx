@@ -8,9 +8,9 @@ import { useTheme } from '../../../ui/theme';
 import { TherapistCard } from '../components/TherapistCard';
 import { useProfessionalsQuery } from '../state/useProfessionalQueries';
 import { specialtyCatalog, sessionModeMeta } from '../models/professionalContent';
-import type { AppError } from '../../../core/errors';
 import type { SessionMode } from '../../../types/models';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'TherapistDirectory'>;
 
@@ -93,7 +93,7 @@ export function TherapistDirectoryScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : (query.data ?? []).length === 0 ? (
           <EmptyState
             title={t('professionals.noResultsTitle')}

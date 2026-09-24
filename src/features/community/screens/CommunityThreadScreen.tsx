@@ -19,6 +19,7 @@ import {
 import { MAX_POST_LENGTH } from '../models/communityContent';
 import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList, AppTabsParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<HomeStackParamList, 'CommunityThread'>,
@@ -49,7 +50,7 @@ export function CommunityThreadScreen({ navigation, route }: Props) {
     return (
       <Screen>
         <ErrorState
-          message={(query.error as AppError)?.message ?? t('community.threadNotFound')}
+          message={errorText(query.error, t) ?? t('community.threadNotFound')}
           onRetry={() => query.refetch()}
         />
       </Screen>
@@ -104,7 +105,7 @@ export function CommunityThreadScreen({ navigation, route }: Props) {
             onDelete={() =>
               deletePost.mutate(post.id, {
                 onSuccess: () => toast.show({ message: t('community.deletedToast'), tone: 'success' }),
-                onError: (error) => toast.show({ message: (error as AppError).message, tone: 'error' }),
+                onError: (error) => toast.show({ message: errorText(error, t), tone: 'error' }),
               })
             }
           />

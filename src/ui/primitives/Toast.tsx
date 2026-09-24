@@ -36,7 +36,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {toast ? (
         <View
-          pointerEvents="box-none"
           style={[
             styles.wrap,
             { bottom: insets.bottom + theme.spacing.md, left: theme.spacing.md, right: theme.spacing.md },
@@ -56,5 +55,6 @@ export function useToast(): ToastContextValue {
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute' },
+  // box-none so the toast never swallows taps meant for the screen under it.
+  wrap: { position: 'absolute', pointerEvents: 'box-none' },
 });

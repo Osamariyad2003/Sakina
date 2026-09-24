@@ -12,7 +12,7 @@ import {
 } from '../state/useNotificationQueries';
 import { notificationScheduler } from '../services/notificationScheduler';
 import { reminderMeta, timeOptions, type ReminderKind } from '../models/notificationContent';
-import type { AppError } from '../../../core/errors';
+import { errorText } from '../../../core/errors';
 
 /**
  * Reminder preferences. Every reminder is opt-in and quiet hours win over
@@ -33,7 +33,7 @@ export function ReminderSettingsScreen() {
   if (query.isError || !query.data) {
     return (
       <Screen>
-        <ErrorState message={(query.error as AppError)?.message ?? t('errors.unknown')} onRetry={() => query.refetch()} />
+        <ErrorState message={errorText(query.error, t) ?? t('errors.unknown')} onRetry={() => query.refetch()} />
       </Screen>
     );
   }

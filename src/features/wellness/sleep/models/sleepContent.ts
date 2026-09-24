@@ -16,6 +16,8 @@
  * revise with content/clinical review before ship.
  */
 
+import { z } from 'zod';
+
 /** Sleep-stage breakdown, in the four stages the summary/detail screens chart. */
 export type SleepStage = 'deep' | 'core' | 'rem' | 'awake';
 export const sleepStages: SleepStage[] = ['deep', 'core', 'rem', 'awake'];
@@ -49,6 +51,28 @@ export interface SleepRecord {
   /** Suggestion ids surfaced for this night (drives the "N AI suggestions" chip). */
   suggestionIds: string[];
 }
+
+/**
+ * Runtime shape of a `SleepRecord`, for validating what the backend sent
+ * (`parseContract`). Lives beside the interface so the two cannot drift:
+ * change one, change the other.
+ */
+export const SleepRecordSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  durationMinutes: z.number().nonnegative(),
+  rating: z.enum(['normal', 'core', 'rem', 'irregular', 'insomniac']),
+  stages: z.object({
+    deep: z.number().nonnegative(),
+    core: z.number().nonnegative(),
+    rem: z.number().nonnegative(),
+    awake: z.number().nonnegative(),
+  }),
+  bedtime: z.string(),
+  wakeTime: z.string(),
+  scoreImpact: z.number(),
+  suggestionIds: z.array(z.string()),
+});
 
 /** A user-defined recurring sleep schedule (bed/wake + alarm prefs). */
 export interface SleepSchedule {

@@ -1,8 +1,7 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
+import { simulateLatency } from '../../../core/async/simulateLatency';
 import { AppError } from '../../../core/errors';
-import { config } from '../../../config';
-import i18n from '../../../i18n';
-import { containsRiskLanguage } from '../../ai-companion/models/riskDetection';
+import { containsRiskLanguage } from '../../../domain/safety/riskDetection';
 import {
   communityGroups,
   seedThreads,
@@ -29,9 +28,6 @@ import {
  * means no future caller can bypass it.
  */
 
-function fakeDelay(ms = 250) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /** Everything this device wrote: threads the user started, and replies. */
 interface LocalCommunityData {
@@ -109,7 +105,7 @@ function allThreads(local: LocalCommunityData): CommunityThread[] {
 }
 
 async function listGroups(): Promise<(CommunityGroup & { threadCount: number })[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   const threads = allThreads(readLocal());
   return communityGroups.map((group) => ({
     ...group,
@@ -118,16 +114,16 @@ async function listGroups(): Promise<(CommunityGroup & { threadCount: number })[
 }
 
 async function listThreads(groupId: string): Promise<CommunityThread[]> {
-  await fakeDelay();
-  if (!getGroup(groupId)) throw new AppError(i18n.t('community.groupNotFound'), 'unknown', 404);
+  await simulateLatency();
+  if (!getGroup(groupId)) throw AppError.withKey('community.groupNotFound', 'unknown', 404);
   return allThreads(readLocal()).filter((t) => t.groupId === groupId);
 }
 
 async function getThread(threadId: string): Promise<{ thread: CommunityThread; posts: CommunityPost[] }> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   const local = readLocal();
   const thread = allThreads(local).find((t) => t.id === threadId);
-  if (!thread) throw new AppError(i18n.t('community.threadNotFound'), 'unknown', 404);
+  if (!thread) throw AppError.withKey('community.threadNotFound', 'unknown', 404);
   const posts = allPosts(local)
     .filter((p) => p.threadId === threadId)
     .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
@@ -141,7 +137,7 @@ async function getProfile(): Promise<CommunityProfile> {
 async function saveProfile(profile: CommunityProfile): Promise<CommunityProfile> {
   const alias = profile.alias.trim().slice(0, MAX_ALIAS_LENGTH);
   if (profile.hasAcceptedGuidelines && alias.length === 0) {
-    throw new AppError(i18n.t('community.aliasRequired'), 'validation', 400);
+    throw AppError.withKey('community.aliasRequired', 'validation', 400);
   }
   const next: CommunityProfile = { ...profile, alias };
   storage.setJSON(storageKeys.communityProfile, next);
@@ -154,32 +150,32 @@ async function saveProfile(profile: CommunityProfile): Promise<CommunityProfile>
  */
 function assertPostable(body: string, profile: CommunityProfile) {
   if (!profile.hasAcceptedGuidelines || !profile.alias) {
-    throw new AppError(i18n.t('community.guidelinesRequired'), 'validation', 403);
+    throw AppError.withKey('community.guidelinesRequired', 'validation', 403);
   }
   const trimmed = body.trim();
   if (trimmed.length < MIN_POST_LENGTH) {
-    throw new AppError(i18n.t('community.postTooShort'), 'validation', 400);
+    throw AppError.withKey('community.postTooShort', 'validation', 400);
   }
   if (trimmed.length > MAX_POST_LENGTH) {
-    throw new AppError(i18n.t('community.postTooLong'), 'validation', 400);
+    throw AppError.withKey('community.postTooLong', 'validation', 400);
   }
   // Peers are not a crisis service — this never becomes a post.
   if (containsRiskLanguage(trimmed)) {
-    throw new AppError(i18n.t('community.riskBlocked'), 'validation', 422);
+    throw AppError.withKey('community.riskBlocked', 'validation', 422);
   }
 }
 
 async function createThread(groupId: string, title: string, body: string): Promise<CommunityThread> {
-  await fakeDelay();
-  if (!getGroup(groupId)) throw new AppError(i18n.t('community.groupNotFound'), 'unknown', 404);
+  await simulateLatency();
+  if (!getGroup(groupId)) throw AppError.withKey('community.groupNotFound', 'unknown', 404);
   const profile = getProfileSync();
   assertPostable(body, profile);
   const trimmedTitle = title.trim();
   if (trimmedTitle.length < MIN_POST_LENGTH) {
-    throw new AppError(i18n.t('community.titleRequired'), 'validation', 400);
+    throw AppError.withKey('community.titleRequired', 'validation', 400);
   }
   if (containsRiskLanguage(trimmedTitle)) {
-    throw new AppError(i18n.t('community.riskBlocked'), 'validation', 422);
+    throw AppError.withKey('community.riskBlocked', 'validation', 422);
   }
 
   const local = readLocal();
@@ -210,10 +206,10 @@ async function createThread(groupId: string, title: string, body: string): Promi
 }
 
 async function reply(threadId: string, body: string): Promise<CommunityPost> {
-  await fakeDelay();
+  await simulateLatency();
   const local = readLocal();
   if (!allThreads(local).some((t) => t.id === threadId)) {
-    throw new AppError(i18n.t('community.threadNotFound'), 'unknown', 404);
+    throw AppError.withKey('community.threadNotFound', 'unknown', 404);
   }
   const profile = getProfileSync();
   assertPostable(body, profile);
@@ -245,26 +241,23 @@ async function toggleSupport(postId: string): Promise<void> {
  * moderation backend that is the honest extent of it — the UI says so.
  */
 async function report(postId: string): Promise<void> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   const local = readLocal();
   if (local.reportedPostIds.includes(postId)) return;
   writeLocal({ ...local, reportedPostIds: [postId, ...local.reportedPostIds] });
 }
 
 async function deleteMyPost(postId: string): Promise<void> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   const local = readLocal();
   const post = local.posts.find((p) => p.id === postId);
-  if (!post) throw new AppError(i18n.t('community.postNotFound'), 'unknown', 404);
+  if (!post) throw AppError.withKey('community.postNotFound', 'unknown', 404);
   writeLocal({ ...local, posts: local.posts.filter((p) => p.id !== postId) });
 }
 
-if (!config.useMockServices) {
-  throw new AppError(
-    'communityService: config.useMockServices=false but no real implementation is wired up yet.',
-    'unknown',
-  );
-}
+// Mock-only even with the real API on: the backend has no thread creation, support/report
+// actions or an "is mine" flag on posts (GET/POST /community/*), so the app's community
+// feature cannot run against it yet.
 
 export const communityService = {
   listGroups,

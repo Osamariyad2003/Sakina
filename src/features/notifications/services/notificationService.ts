@@ -1,5 +1,5 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
-import { AppError } from '../../../core/errors';
+import { simulateLatency } from '../../../core/async/simulateLatency';
 import { config } from '../../../config';
 import { moodService } from '../../mood/services/moodService';
 import { journalService } from '../../journal/services/journalService';
@@ -24,9 +24,6 @@ import {
  * happened — and means it can never spam, however often `refresh()` runs.
  */
 
-function fakeDelay(ms = 200) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function readInbox(): AppNotification[] {
   return storage.getJSON<AppNotification[]>(storageKeys.mockNotifications) ?? [];
@@ -85,7 +82,7 @@ function addOnce(existing: AppNotification[], candidate: AppNotification): AppNo
  * duplicated.
  */
 async function refresh(): Promise<AppNotification[]> {
-  await fakeDelay();
+  await simulateLatency();
   const preferences = await getPreferences();
   const today = dayKey();
   const now = new Date();
@@ -157,7 +154,7 @@ function sortInbox(inbox: AppNotification[]): AppNotification[] {
 }
 
 async function list(): Promise<AppNotification[]> {
-  await fakeDelay(120);
+  await simulateLatency(120);
   return sortInbox(readInbox());
 }
 
@@ -187,12 +184,9 @@ async function push(notification: AppNotification): Promise<void> {
   writeInbox(addOnce(readInbox(), notification));
 }
 
-if (!config.useMockServices) {
-  throw new AppError(
-    'notificationService: config.useMockServices=false but no real implementation is wired up yet.',
-    'unknown',
-  );
-}
+// Mock-only even with the real API on: the app derives its inbox and reminder kinds
+// locally, while the backend inbox is server-created and its reminder kinds (mood_checkin,
+// hydration, sleep, journal, wellness) differ from the app's.
 
 export const notificationService = {
   list,

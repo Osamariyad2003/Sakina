@@ -7,6 +7,7 @@ import { useTheme } from '../../../ui/theme';
 import { AnimatedLottie } from '../../../ui/lottie';
 import { wellnessCategories, wellnessExercises } from '../models/wellnessContent';
 import { ExerciseCard } from '../components/ExerciseCard';
+import { useBadgeSignalsQuery } from '../../badges/state/useBadgeQueries';
 import type { WellnessCategory } from '../../../types/models';
 import type { WellnessStackParamList } from '../../../navigation/types';
 
@@ -17,6 +18,7 @@ export function WellnessHomeScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language !== 'en';
   const [category, setCategory] = useState<WellnessCategory>('breathing');
+  const signalsQuery = useBadgeSignalsQuery();
 
   const exercises = wellnessExercises.filter((e) => e.category === category);
 
@@ -24,6 +26,19 @@ export function WellnessHomeScreen({ navigation }: Props) {
     <Screen edges={['top']} padded={false}>
       <View style={{ paddingHorizontal: theme.spacing.md, paddingTop: theme.spacing.lg, gap: theme.spacing.md }}>
         <AppText variant="displayMd">{t('wellness.title')}</AppText>
+
+        {/* Feature 7 (Mindful Minutes) — reuses Badges' stat-card pattern (accent top-border + big number + caption). */}
+        <Card style={{ borderTopWidth: 3, borderTopColor: theme.colors.accent.mindful }} elevation="md">
+          <AppText variant="titleLg">{t('wellness.mindfulMinutesTitle')}</AppText>
+          <AppText variant="caption" color={theme.colors.text.secondary} style={{ marginTop: theme.spacing.xxs }}>
+            {t('wellness.mindfulMinutesValue', { count: signalsQuery.data?.mindfulMinutes ?? 0 })}
+          </AppText>
+          <AppText variant="caption" color={theme.colors.text.secondary}>
+            {signalsQuery.data && signalsQuery.data.mindfulStreak > 0
+              ? t('wellness.mindfulStreakValue', { count: signalsQuery.data.mindfulStreak })
+              : t('wellness.mindfulStreakEmpty')}
+          </AppText>
+        </Card>
 
         <Card onPress={() => navigation.navigate('StressOverview')} elevation="md">
           <AppText variant="titleMd">{t('wellness.stressManagementCardTitle')}</AppText>

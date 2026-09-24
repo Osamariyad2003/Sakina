@@ -9,8 +9,8 @@ import { useSleepFormat } from '../components/useSleepFormat';
 import { stageColor } from '../components/sleepColors';
 import { useSleepRecordsQuery } from '../state/useSleepQueries';
 import { optimalSleepMinutes } from '../models/sleepContent';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'SleepQuality'>;
 
@@ -46,7 +46,7 @@ export function SleepQualityScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : (
           <>
             <Card elevation="md" style={{ backgroundColor: theme.colors.brand.primary, gap: theme.spacing.sm }}>

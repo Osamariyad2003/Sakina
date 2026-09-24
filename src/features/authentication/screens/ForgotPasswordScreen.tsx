@@ -8,8 +8,8 @@ import { Screen, AppText, TextField, Button, ErrorState } from '../../../ui/prim
 import { useTheme } from '../../../ui/theme';
 import { useForgotPasswordMutation } from '../state/useAuthMutations';
 import { buildForgotPasswordSchema, type ForgotPasswordFormValues } from '../validation/schemas';
-import type { AppError } from '../../../core/errors';
 import type { AuthStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
@@ -40,12 +40,16 @@ export function ForgotPasswordScreen({ navigation }: Props) {
             {t('auth.resetLinkSentTitle')}
           </AppText>
           <AppText variant="body" color={theme.colors.text.secondary} style={{ textAlign: 'center' }}>
-            {t('auth.resetLinkSentBody')}
+            {mutation.data?.resetToken ? t('auth.resetLinkSentBody') : t('auth.resetLinkSentBodyLive')}
           </AppText>
-          <Button
-            label={t('common.next')}
-            onPress={() => navigation.navigate('ResetPassword', { token: mutation.data?.resetToken })}
-          />
+          {mutation.data?.resetToken ? (
+            <Button
+              label={t('common.next')}
+              onPress={() => navigation.navigate('ResetPassword', { token: mutation.data?.resetToken })}
+            />
+          ) : (
+            <Button label={t('auth.loginTitle')} onPress={() => navigation.navigate('Login')} />
+          )}
         </View>
       </Screen>
     );
@@ -86,7 +90,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
             )}
           />
 
-          {mutation.isError ? <ErrorState message={(mutation.error as AppError).message} /> : null}
+          {mutation.isError ? <ErrorState message={errorText(mutation.error, t)} /> : null}
 
           <Button label={t('auth.sendResetLink')} onPress={handleSubmit(onSubmit)} loading={mutation.isPending} />
           <Button label={t('common.back')} variant="ghost" onPress={() => navigation.navigate('Login')} />

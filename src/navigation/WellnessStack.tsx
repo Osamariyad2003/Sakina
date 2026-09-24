@@ -8,6 +8,10 @@ import { StressOverviewScreen } from '../features/wellness/stress-management/scr
 import { StressTechniqueDetailScreen } from '../features/wellness/stress-management/screens/StressTechniqueDetailScreen';
 import { StressActiveSessionScreen } from '../features/wellness/stress-management/screens/StressActiveSessionScreen';
 import { StressCompletionScreen } from '../features/wellness/stress-management/screens/StressCompletionScreen';
+import { StressCheckInScreen } from '../features/wellness/stress-management/screens/StressCheckInScreen';
+import { StressHistoryScreen } from '../features/wellness/stress-management/screens/StressHistoryScreen';
+import { StressDetailScreen } from '../features/wellness/stress-management/screens/StressDetailScreen';
+import { StressSuggestionDetailScreen } from '../features/wellness/stress-management/screens/StressSuggestionDetailScreen';
 import { HydrationHomeScreen } from '../features/wellness/hydration/screens/HydrationHomeScreen';
 import { HydrationLogScreen } from '../features/wellness/hydration/screens/HydrationLogScreen';
 import { HydrationHistoryScreen } from '../features/wellness/hydration/screens/HydrationHistoryScreen';
@@ -44,6 +48,11 @@ export function WellnessStack() {
       <Stack.Screen name="StressTechniqueDetail" component={StressTechniqueDetailScreen} />
       <Stack.Screen name="StressActiveSession" component={StressActiveSessionScreen} options={fullScreenModalOptions} />
       <Stack.Screen name="StressCompletion" component={StressCompletionScreen} />
+      {/* Stress check-in tracking — level/trigger/note history, mirrors Mood. */}
+      <Stack.Screen name="StressCheckIn" component={StressCheckInScreen} />
+      <Stack.Screen name="StressHistory" component={StressHistoryScreen} />
+      <Stack.Screen name="StressDetail" component={StressDetailScreen} />
+      <Stack.Screen name="StressSuggestionDetail" component={StressSuggestionDetailScreen} />
       {/* Hydration tracker. */}
       <Stack.Screen name="HydrationHome" component={HydrationHomeScreen} />
       <Stack.Screen name="HydrationLog" component={HydrationLogScreen} />

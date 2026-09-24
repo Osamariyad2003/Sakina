@@ -8,9 +8,9 @@ import { MoodChart } from '../components/MoodChart';
 import { moodColor } from '../components/moodColors';
 import { useTodayMoodQuery, useMoodHistoryQuery, useMoodTrendQuery } from '../state/useMoodQueries';
 import { moodLevels } from '../models/moodContent';
-import type { AppError } from '../../../core/errors';
 import type { MoodEntry } from '../../../types/models';
 import type { MoodStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<MoodStackParamList, 'MoodHome'>;
 
@@ -54,7 +54,7 @@ export function MoodHomeScreen({ navigation }: Props) {
         {todayQuery.isLoading ? (
           <SkeletonList rows={2} rowHeight={90} />
         ) : todayQuery.isError ? (
-          <ErrorState message={(todayQuery.error as AppError).message} onRetry={() => todayQuery.refetch()} />
+          <ErrorState message={errorText(todayQuery.error, t)} onRetry={() => todayQuery.refetch()} />
         ) : (
           <Card
             elevation="md"
@@ -84,7 +84,7 @@ export function MoodHomeScreen({ navigation }: Props) {
           {trendQuery.isLoading ? (
             <SkeletonList rows={1} rowHeight={140} />
           ) : trendQuery.isError ? (
-            <ErrorState message={(trendQuery.error as AppError).message} onRetry={() => trendQuery.refetch()} />
+            <ErrorState message={errorText(trendQuery.error, t)} onRetry={() => trendQuery.refetch()} />
           ) : (
             <MoodChart points={trendQuery.data ?? []} />
           )}

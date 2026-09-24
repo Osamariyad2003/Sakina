@@ -1,10 +1,9 @@
 import { storage, storageKeys } from '../../../core/storage/mmkv';
 import { AppError } from '../../../core/errors';
-import { config } from '../../../config';
-import i18n from '../../../i18n';
 import { moodService } from '../../mood/services/moodService';
 import { journalService } from '../../journal/services/journalService';
 import { stressService } from '../../wellness/stress-management/services/stressService';
+import { wellnessSessionService } from '../../wellness/services/wellnessSessionService';
 import { sleepService } from '../../wellness/sleep/services/sleepService';
 import { hydrationService } from '../../wellness/hydration/services/hydrationService';
 import { resourceService } from '../../wellness/resources/services/resourceService';
@@ -47,12 +46,16 @@ function writeSeen(ids: string[]) {
   storage.setJSON(storageKeys.badgesSeen, ids);
 }
 
+/** Categories that count as "mindful" practice (Feature 7) — grounding/stressRelief/sleep content have their own tracking already. */
+const mindfulCategories = new Set(['meditation', 'breathing', 'relaxation']);
+
 async function getSignals(): Promise<BadgeSignals> {
-  const [moodEntries, journalEntries, stressSessions, sleepRecords, hydrationHistory, saved, registrations, groups] =
+  const [moodEntries, journalEntries, stressSessions, wellnessSessions, sleepRecords, hydrationHistory, saved, registrations, groups] =
     await Promise.all([
       moodService.listEntries(),
       journalService.list(),
       stressService.listSessions(),
+      wellnessSessionService.listSessions(),
       sleepService.listRecords(),
       hydrationService.listHistory(),
       resourceService.listSaved(),
@@ -74,11 +77,14 @@ async function getSignals(): Promise<BadgeSignals> {
 
   const moodDays = new Set(moodEntries.map((e) => e.createdAt.slice(0, 10)));
   const journalDays = new Set(journalEntries.map((e) => e.createdAt.slice(0, 10)));
+  const mindfulSessions = wellnessSessions.filter((s) => mindfulCategories.has(s.category));
+  const mindfulDays = new Set(mindfulSessions.map((s) => s.completedAt.slice(0, 10)));
 
   const allTimestamps = [
     ...moodEntries.map((e) => e.createdAt),
     ...journalEntries.map((e) => e.createdAt),
     ...stressSessions.map((s) => s.startedAt),
+    ...wellnessSessions.map((s) => s.completedAt),
   ].sort();
   const firstActivity = allTimestamps[0];
   const daysActive = firstActivity
@@ -90,8 +96,17 @@ async function getSignals(): Promise<BadgeSignals> {
     moodCheckInStreak: consecutiveStreak(moodDays),
     journalEntryCount: journalEntries.length,
     journalStreak: consecutiveStreak(journalDays),
-    wellnessSessionCount: stressSessions.length,
-    wellnessMinutes: Math.round(stressSessions.reduce((sum, s) => sum + s.durationSeconds / 60, 0)),
+    // Every completed session across Stress Management *and* the general Wellness
+    // exercise flow (breathing/grounding/relaxation/meditation/sleep content).
+    wellnessSessionCount: stressSessions.length + wellnessSessions.length,
+    wellnessMinutes: Math.round(
+      [...stressSessions.map((s) => s.durationSeconds), ...wellnessSessions.map((s) => s.durationSeconds)].reduce(
+        (sum, seconds) => sum + seconds / 60,
+        0,
+      ),
+    ),
+    mindfulMinutes: Math.round(mindfulSessions.reduce((sum, s) => sum + s.durationSeconds / 60, 0)),
+    mindfulStreak: consecutiveStreak(mindfulDays),
     sleepRecordCount: sleepRecords.length,
     hydrationLogCount: hydrationHistory.length,
     articlesRead: saved.articles.length,
@@ -110,7 +125,7 @@ async function list(): Promise<BadgeProgress[]> {
 async function get(badgeId: string): Promise<BadgeProgress> {
   const all = await list();
   const found = all.find((b) => b.definition.id === badgeId);
-  if (!found) throw new AppError(i18n.t('badges.notFound'), 'unknown', 404);
+  if (!found) throw AppError.withKey('badges.notFound', 'unknown', 404);
   return found;
 }
 
@@ -141,8 +156,8 @@ async function celebrateNewlyEarned(): Promise<BadgeProgress[]> {
   return fresh;
 }
 
-if (!config.useMockServices) {
-  throw new AppError('badgeService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
-}
+// Derived client-side from the other services (which are live when the real API is on), so
+// there is nothing backend-specific to switch. The backend badge catalogue has no matching
+// model.
 
 export const badgeService = { getSignals, list, get, celebrateNewlyEarned };

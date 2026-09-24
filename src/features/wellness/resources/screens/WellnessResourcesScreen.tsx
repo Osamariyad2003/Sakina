@@ -13,8 +13,8 @@ import {
   useWorkshopRegistrationsQuery,
 } from '../state/useResourceQueries';
 import { resourceTopics, type ResourceTopic } from '../models/resourceContent';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'WellnessResources'>;
 
@@ -80,7 +80,7 @@ export function WellnessResourcesScreen({ navigation }: Props) {
         {activeQuery.isLoading ? (
           <SkeletonList rows={4} />
         ) : activeQuery.isError ? (
-          <ErrorState message={(activeQuery.error as AppError).message} onRetry={() => activeQuery.refetch()} />
+          <ErrorState message={errorText(activeQuery.error, t)} onRetry={() => activeQuery.refetch()} />
         ) : section === 'articles' ? (
           (articlesQuery.data ?? []).length === 0 ? (
             <EmptyState title={t('resources.noArticlesTitle')} description={t('resources.noArticlesBody')} />

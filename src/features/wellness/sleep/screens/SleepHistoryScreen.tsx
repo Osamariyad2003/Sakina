@@ -10,8 +10,8 @@ import { SleepStageBar } from '../components/SleepStageBar';
 import { useSleepFormat } from '../components/useSleepFormat';
 import { ratingColor } from '../components/sleepColors';
 import { useSleepRecordsQuery } from '../state/useSleepQueries';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'SleepHistory'>;
 
@@ -36,7 +36,7 @@ export function SleepHistoryScreen({ navigation }: Props) {
           {query.isLoading ? (
             <SkeletonList rows={5} />
           ) : query.isError ? (
-            <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+            <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
           ) : records.length === 0 ? (
             <EmptyState
               title={t('sleep.historyEmptyTitle')}

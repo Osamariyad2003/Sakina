@@ -8,8 +8,8 @@ import { useTheme } from '../../../../ui/theme';
 import { useHydrationHistoryQuery } from '../state/useHydrationQueries';
 import { DateHeader } from '../../../journal/components/DateHeader';
 import type { HydrationLog } from '../models/hydrationContent';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'HydrationHistory'>;
 
@@ -52,7 +52,7 @@ export function HydrationHistoryScreen({ navigation: _navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : items.length === 0 ? (
           <EmptyState title={t('hydration.historyEmptyTitle')} description={t('hydration.historyEmptyBody')} />
         ) : (

@@ -10,8 +10,8 @@ import { moodColor } from '../components/moodColors';
 import { useMoodHistoryQuery, useMoodTrendQuery } from '../state/useMoodQueries';
 import { moodLevels } from '../models/moodContent';
 import type { MoodLevel } from '../../../types/models';
-import type { AppError } from '../../../core/errors';
 import type { MoodStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<MoodStackParamList, 'MoodOverview'>;
 
@@ -73,7 +73,7 @@ export function MoodOverviewScreen(_props: Props) {
           {trendQuery.isLoading ? (
             <SkeletonList rows={1} rowHeight={140} />
           ) : trendQuery.isError ? (
-            <ErrorState message={(trendQuery.error as AppError).message} onRetry={() => trendQuery.refetch()} />
+            <ErrorState message={errorText(trendQuery.error, t)} onRetry={() => trendQuery.refetch()} />
           ) : (
             <MoodChart points={trendQuery.data ?? []} />
           )}

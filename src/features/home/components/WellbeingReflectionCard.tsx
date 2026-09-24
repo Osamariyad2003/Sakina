@@ -7,7 +7,7 @@ import { Card, AppText, Badge, SkeletonList, ErrorState } from '../../../ui/prim
 import { useTheme } from '../../../ui/theme';
 import { AnimatedLottie } from '../../../ui/lottie';
 import { useWellbeingReflectionQuery, useTrackerSignalsQuery } from '../state/useHomeQueries';
-import type { AppError } from '../../../core/errors';
+import { errorText } from '../../../core/errors';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const RING_SIZE = 48;
@@ -96,7 +96,12 @@ export function WellbeingReflectionCard() {
   const checkIns = trackersQuery.data?.find((s) => s.key === 'checkIns')?.value ?? 0;
 
   return (
-    <Card style={{ width: 280, minHeight: 150, borderTopWidth: 3, borderTopColor: theme.colors.accent.reflection }} elevation="md">
+    <Card
+      // Tinted block per the reference carousel. Sakina's accents are soft
+      // pastels, so body text keeps its normal dark colour on top.
+      style={{ width: 280, minHeight: 150, backgroundColor: theme.colors.accent.reflection }}
+      elevation="md"
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <AppText variant="label" color={theme.colors.text.secondary} style={{ flex: 1 }}>
           {t('home.reflectionCardTitle')}
@@ -116,7 +121,7 @@ export function WellbeingReflectionCard() {
           <SkeletonList rows={2} rowHeight={16} />
         </View>
       ) : query.isError ? (
-        <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+        <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
       ) : query.data ? (
         <>
           <AppText variant="body" style={{ marginTop: theme.spacing.xs }}>

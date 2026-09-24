@@ -12,6 +12,8 @@
  * #2/#7). See ASSUMPTIONS.md.
  */
 
+import type { ContentImage } from '../../../../types/models';
+
 export type ResourceTopic = 'anxiety' | 'sleep' | 'stress' | 'mood' | 'relationships' | 'focus';
 
 export interface ResourceTopicMeta {
@@ -50,6 +52,8 @@ export interface ResourceArticle {
   summaryEn: string;
   /** Rough read time in minutes — shown so nothing feels like a commitment. */
   readMinutes: number;
+  /** Curated header image. Absent on most articles — the card then renders text-only. */
+  image?: ContentImage;
   sections: ResourceSection[];
   /** Optional next step inside the app, so an article can end in something doable. */
   practice?: { kind: 'wellnessExercise'; exerciseId: string } | { kind: 'journalPrompt'; promptAr: string; promptEn: string };

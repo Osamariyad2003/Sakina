@@ -6,6 +6,8 @@
  * `moodContent.ts`.
  */
 
+import { z } from 'zod';
+
 export type DrinkSizeKey = 'small' | 'glass' | 'bottle';
 
 export interface DrinkSizeOption {
@@ -29,3 +31,10 @@ export interface HydrationLog {
   sizeMl: number;
   createdAt: string;
 }
+
+/** Runtime shape of a `HydrationLog` — see SleepRecordSchema for the rationale. */
+export const HydrationLogSchema = z.object({
+  id: z.string(),
+  sizeMl: z.number().positive(),
+  createdAt: z.string(),
+});

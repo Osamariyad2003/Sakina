@@ -9,8 +9,8 @@ import { PasswordField } from '../components/PasswordField';
 import { useTheme } from '../../../ui/theme';
 import { useLoginMutation } from '../state/useAuthMutations';
 import { buildLoginSchema, type LoginFormValues } from '../validation/schemas';
-import type { AppError } from '../../../core/errors';
 import type { AuthStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -89,7 +89,7 @@ export function LoginScreen({ navigation }: Props) {
             />
           </View>
 
-          {mutation.isError ? <ErrorState message={(mutation.error as AppError).message} /> : null}
+          {mutation.isError ? <ErrorState message={errorText(mutation.error, t)} /> : null}
 
           <Button
             label={t('auth.loginButton')}

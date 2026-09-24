@@ -19,6 +19,8 @@
  * ship. See ASSUMPTIONS.md.
  */
 
+import { z } from 'zod';
+
 export type CheckerMethod = 'manual' | 'chatbot';
 
 export type Severity = 'lowToMild' | 'moderate' | 'severe' | 'verySevere';
@@ -261,6 +263,16 @@ export interface CheckerSession {
   /** True if risk language / self-harm was reported during this run. */
   riskFlagged: boolean;
 }
+
+/** Runtime shape of a `CheckerSession` — see SleepRecordSchema for the rationale. */
+export const CheckerSessionSchema = z.object({
+  id: z.string(),
+  method: z.enum(['manual', 'chatbot']),
+  createdAt: z.string(),
+  symptomIds: z.array(z.string()),
+  topConditionId: z.string().nullable(),
+  riskFlagged: z.boolean(),
+});
 
 export interface ConditionMatch {
   conditionId: string;

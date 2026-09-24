@@ -1,9 +1,12 @@
 import { storage, storageKeys } from '../../../../core/storage/mmkv';
-import { AppError } from '../../../../core/errors';
+import { parseContract } from '../../../../core/api';
+import { simulateLatency } from '../../../../core/async/simulateLatency';
+import { apiClient, fetchAllPages, unwrap, type ApiSuccess } from '../../../../core/api';
 import { config } from '../../../../config';
 import {
   optimalSleepMinutes,
   minimalSleepMinutes,
+  SleepRecordSchema,
   type SleepRecord,
   type SleepSchedule,
   type SleepScheduleDraft,
@@ -19,9 +22,6 @@ import {
  * schedules start empty (the user creates them through the flow).
  */
 
-function fakeDelay(ms = 300) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 // --- Schedules (a real local preference, not mock data) --------------------
 
@@ -34,12 +34,12 @@ function writeSchedules(schedules: SleepSchedule[]) {
 }
 
 async function listSchedules(): Promise<SleepSchedule[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   return readSchedules();
 }
 
 async function createSchedule(draft: SleepScheduleDraft): Promise<SleepSchedule> {
-  await fakeDelay(200);
+  await simulateLatency(200);
   const schedule: SleepSchedule = {
     id: `sleep-schedule-${Date.now()}`,
     bedtime: draft.bedtime,
@@ -56,7 +56,7 @@ async function createSchedule(draft: SleepScheduleDraft): Promise<SleepSchedule>
 }
 
 async function setScheduleEnabled(id: string, enabled: boolean): Promise<SleepSchedule[]> {
-  await fakeDelay(120);
+  await simulateLatency(120);
   const next = readSchedules().map((s) => (s.id === id ? { ...s, enabled } : s));
   writeSchedules(next);
   return next;
@@ -143,17 +143,17 @@ function writeRecords(records: SleepRecord[]) {
 }
 
 async function listRecords(): Promise<SleepRecord[]> {
-  await fakeDelay();
+  await simulateLatency();
   return readRecords();
 }
 
 async function getRecord(id: string): Promise<SleepRecord | undefined> {
-  await fakeDelay(120);
+  await simulateLatency(120);
   return readRecords().find((r) => r.id === id);
 }
 
 async function deleteRecord(id: string): Promise<SleepRecord[]> {
-  await fakeDelay(150);
+  await simulateLatency(150);
   const next = readRecords().filter((r) => r.id !== id);
   writeRecords(next);
   return next;
@@ -170,14 +170,18 @@ export interface CreateSleepRecordInput {
  * are derived from the duration with a light, deterministic model (no real
  * sensor data exists — see the file header assumption).
  */
-async function createRecord(input: CreateSleepRecordInput): Promise<SleepRecord> {
-  await fakeDelay(200);
+/**
+ * The rating, stage split, score impact and suggestions are illustrative
+ * values derived from the duration alone — the same rules the mock has always
+ * used. Neither the mock nor the backend measures sleep stages.
+ */
+function deriveRecord(id: string, date: string, input: CreateSleepRecordInput): SleepRecord {
   const { durationMinutes } = input;
   const awake = Math.round(durationMinutes * 0.06);
   const asleep = Math.max(0, durationMinutes - awake);
-  const record: SleepRecord = {
-    id: `sleep-record-${Date.now()}`,
-    date: new Date().toISOString().slice(0, 10),
+  return {
+    id,
+    date,
     durationMinutes,
     rating:
       durationMinutes >= optimalSleepMinutes
@@ -198,6 +202,11 @@ async function createRecord(input: CreateSleepRecordInput): Promise<SleepRecord>
     scoreImpact: durationMinutes >= minimalSleepMinutes ? 3 : durationMinutes >= 3 * 60 ? -1 : -3,
     suggestionIds: durationMinutes >= minimalSleepMinutes ? [] : ['optimize-environment', 'limit-screens'],
   };
+}
+
+async function createRecord(input: CreateSleepRecordInput): Promise<SleepRecord> {
+  await simulateLatency(200);
+  const record = deriveRecord(`sleep-record-${Date.now()}`, new Date().toISOString().slice(0, 10), input);
   writeRecords([record, ...readRecords()]);
   return record;
 }
@@ -220,7 +229,7 @@ export interface SleepRecommendation {
  * optimal target (nudging their stated in-bed time toward it).
  */
 async function recommend(answers: { wakeUp: string; inBed: string }): Promise<SleepRecommendation> {
-  await fakeDelay(900); // "Compiling data…"
+  await simulateLatency(900); // "Compiling data…"
   const [wh, wm] = answers.wakeUp.split(':').map((n) => parseInt(n, 10));
   const wakeMinutes = wh * 60 + wm;
   const bedMinutes = ((wakeMinutes - optimalSleepMinutes) % 1440 + 1440) % 1440;
@@ -233,11 +242,65 @@ async function recommend(answers: { wakeUp: string; inBed: string }): Promise<Sl
   };
 }
 
-if (!config.useMockServices) {
-  throw new AppError('sleepService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
+// --- Real backend (config.useMockServices false) ----------------------------
+// /sleep: POST { bedTime, wakeTime } · GET (paginated, newest first) ·
+// DELETE /:id (no get-by-id). The backend stores full timestamps; the app
+// works in "HH:MM" + duration, so:
+//   - saving: wake = today at `wakeTime`, bed = wake − duration
+//   - reading: HH:MM and duration come from the two timestamps, `date` is the
+//     wake-up day, and the derived fields go through `deriveRecord`.
+// Schedules and the recommendation are local (no backend counterpart).
+
+interface ApiSleepRecord {
+  id: string;
+  bedTime: string;
+  wakeTime: string;
 }
 
-export const sleepService = {
+const pad = (n: number) => String(n).padStart(2, '0');
+const toClock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const toLocalDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+function fromApiRecord(record: ApiSleepRecord): SleepRecord {
+  const bed = new Date(record.bedTime);
+  const wake = new Date(record.wakeTime);
+  const durationMinutes = Math.max(0, Math.round((wake.getTime() - bed.getTime()) / 60000));
+  // `deriveRecord` fills in the derived fields (rating, stages, score), so the
+  // contract check runs on the finished domain object.
+  return parseContract(
+    SleepRecordSchema,
+    deriveRecord(record.id, toLocalDate(wake), {
+      durationMinutes,
+      bedtime: toClock(bed),
+      wakeTime: toClock(wake),
+    }),
+    'GET /sleep',
+  );
+}
+
+async function liveListRecords(): Promise<SleepRecord[]> {
+  return (await fetchAllPages<ApiSleepRecord>('/sleep')).map(fromApiRecord);
+}
+
+async function liveGetRecord(id: string): Promise<SleepRecord | undefined> {
+  return (await liveListRecords()).find((r) => r.id === id);
+}
+
+async function liveDeleteRecord(id: string): Promise<SleepRecord[]> {
+  await apiClient.delete(`/sleep/${id}`);
+  return liveListRecords();
+}
+
+async function liveCreateRecord(input: CreateSleepRecordInput): Promise<SleepRecord> {
+  const [hours, minutes] = input.wakeTime.split(':').map((n) => parseInt(n, 10));
+  const wake = new Date();
+  wake.setHours(hours, minutes, 0, 0);
+  const bed = new Date(wake.getTime() - input.durationMinutes * 60000);
+  const body = { bedTime: bed.toISOString(), wakeTime: wake.toISOString() };
+  return fromApiRecord(unwrap(await apiClient.post<ApiSuccess<ApiSleepRecord>>('/sleep', body)));
+}
+
+const mockSleepService = {
   listSchedules,
   createSchedule,
   setScheduleEnabled,
@@ -247,3 +310,13 @@ export const sleepService = {
   createRecord,
   recommend,
 };
+
+export const sleepService: typeof mockSleepService = config.useMockServices
+  ? mockSleepService
+  : {
+      ...mockSleepService,
+      listRecords: liveListRecords,
+      getRecord: liveGetRecord,
+      deleteRecord: liveDeleteRecord,
+      createRecord: liveCreateRecord,
+    };

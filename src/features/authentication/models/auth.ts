@@ -11,6 +11,8 @@ export const RegisterPayloadSchema = z.object({
   displayName: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
+  /** The app's language at sign-up, supplied by the caller (the service does not read i18n). */
+  language: z.enum(['ar', 'en']).optional(),
 });
 export type RegisterPayload = z.infer<typeof RegisterPayloadSchema>;
 

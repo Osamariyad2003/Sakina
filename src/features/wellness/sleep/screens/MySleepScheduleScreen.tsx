@@ -13,8 +13,8 @@ import {
   useSleepRecordsQuery,
 } from '../state/useSleepQueries';
 import { scheduleDurationMinutes, sleepSuggestions } from '../models/sleepContent';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'MySleepSchedule'>;
 
@@ -51,7 +51,7 @@ export function MySleepScheduleScreen({ navigation }: Props) {
         {schedulesQuery.isLoading ? (
           <SkeletonList rows={3} />
         ) : schedulesQuery.isError ? (
-          <ErrorState message={(schedulesQuery.error as AppError).message} onRetry={() => schedulesQuery.refetch()} />
+          <ErrorState message={errorText(schedulesQuery.error, t)} onRetry={() => schedulesQuery.refetch()} />
         ) : schedules.length === 0 ? (
           <EmptyState
             title={t('sleep.schedulesEmptyTitle')}

@@ -1,41 +1,26 @@
-import { storage, storageKeys } from '../../../core/storage/mmkv';
-import { AppError } from '../../../core/errors';
-import { config } from '../../../config';
 import { moodService } from '../../mood/services/moodService';
+import { simulateLatency } from '../../../core/async/simulateLatency';
 import { moodLevelWeight } from '../../mood/models/moodContent';
 import { journalService } from '../../journal/services/journalService';
 import { stressService } from '../../wellness/stress-management/services/stressService';
-import { reflectionTemplates, type WellbeingReflection, type TrackerSignal, type StressLevel } from '../models/homeContent';
-import type { MoodEntry } from '../../../types/models';
+import { stressCheckInService } from '../../wellness/stress-management/services/stressCheckInService';
+import { wellnessSessionService } from '../../wellness/services/wellnessSessionService';
+import { stressLevelWeight } from '../../wellness/stress-management/models/stressContent';
+import { reflectionTemplates, type WellbeingReflection, type TrackerSignal } from '../models/homeContent';
+import type { MoodEntry, StressEntry, StressLevel } from '../../../types/models';
 
 /**
  * Mostly derived/composed data, reading through the existing mock services
  * (mood/journal/stress — each already carries its own `config
- * .useMockServices` guard). The one exception is the self-reported Stress
- * Level tracker, which this module persists itself (never measured or
- * inferred — the user sets it), so this file gets its own guard too, same
- * pattern as journal/mood/companion/stress. `fakeDelay` matches the same
- * pattern so Home's cards exercise real loading states.
+ * .useMockServices` guard). The self-reported Stress Level tracker now
+ * reads/writes through `stressCheckInService` (features/wellness/
+ * stress-management) instead of keeping its own parallel store, so Home's
+ * quick-set widget and the full Stress check-in/history feature always
+ * agree on what "today's stress" is. This file keeps its own guard too,
+ * same pattern as journal/mood/companion/stress. `fakeDelay` matches the
+ * same pattern so Home's cards exercise real loading states.
  */
 
-function fakeDelay(ms = 250) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-interface StressLevelEntry {
-  level: StressLevel;
-  createdAt: string;
-}
-
-function readStressLevels(): StressLevelEntry[] {
-  return storage.getJSON<StressLevelEntry[]>(storageKeys.selfReportedStressLevels) ?? [];
-}
-
-function writeStressLevels(entries: StressLevelEntry[]) {
-  storage.setJSON(storageKeys.selfReportedStressLevels, entries);
-}
-
-const stressLevelWeight: Record<StressLevel, number> = { low: 1, medium: 2, high: 3 };
 
 function dateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -58,7 +43,7 @@ function withinLastDays(iso: string, days: number): boolean {
 }
 
 async function getWellbeingReflection(): Promise<WellbeingReflection> {
-  await fakeDelay();
+  await simulateLatency();
   const [moodEntries, journalEntries, stressSessions] = await Promise.all([
     moodService.listEntries(),
     journalService.list(),
@@ -108,24 +93,33 @@ function consecutiveStreak(daySet: Set<string>): number {
 }
 
 async function getTrackerSignals(): Promise<TrackerSignal[]> {
-  await fakeDelay();
-  const [moodEntries, journalEntries, stressSessions, stressLevels] = await Promise.all([
+  await simulateLatency();
+  const [moodEntries, journalEntries, stressSessions, wellnessSessions, stressEntries] = await Promise.all([
     moodService.listEntries(),
     journalService.list(),
     stressService.listSessions(),
-    Promise.resolve(readStressLevels()),
+    wellnessSessionService.listSessions(),
+    stressCheckInService.listEntries(),
   ]);
 
   const days = lastNDayKeys(7);
   const moodDays = new Set(moodEntries.map((e) => e.createdAt.slice(0, 10)));
   const journalDays = new Set(journalEntries.map((e) => e.createdAt.slice(0, 10)));
   const minutesByDay: Record<string, number> = {};
+  // Both Stress Management technique sessions *and* general Wellness exercise
+  // completions count toward "mindful minutes" — see wellnessSessionService's
+  // module doc for why the latter wasn't recorded anywhere until now.
   for (const s of stressSessions) {
     const key = (s.completedAt ?? s.startedAt).slice(0, 10);
     minutesByDay[key] = (minutesByDay[key] ?? 0) + s.durationSeconds / 60;
   }
+  for (const s of wellnessSessions) {
+    const key = s.completedAt.slice(0, 10);
+    minutesByDay[key] = (minutesByDay[key] ?? 0) + s.durationSeconds / 60;
+  }
+  // Oldest-first so, when several check-ins land on the same day, the last write wins (today's *latest* level).
   const stressLevelByDay: Record<string, StressLevel> = {};
-  for (const entry of stressLevels) {
+  for (const entry of [...stressEntries].reverse()) {
     stressLevelByDay[entry.createdAt.slice(0, 10)] = entry.level;
   }
 
@@ -144,19 +138,19 @@ async function getTrackerSignals(): Promise<TrackerSignal[]> {
   ];
 }
 
-/** Sets *today's* self-reported stress level — overwrites any earlier entry for today, same one-per-day shape as mood. */
-async function setStressLevel(level: StressLevel): Promise<StressLevelEntry> {
-  await fakeDelay(150);
-  const now = new Date();
-  const todayKey = dateKey(now);
-  const entries = readStressLevels().filter((e) => e.createdAt.slice(0, 10) !== todayKey);
-  const entry: StressLevelEntry = { level, createdAt: now.toISOString() };
-  writeStressLevels([entry, ...entries]);
-  return entry;
+/**
+ * Sets *today's* self-reported stress level from Home's quick-set widget —
+ * a plain `createEntry` with no triggers/note, same store the full Stress
+ * check-in screen writes to (`stressCheckInService`). Tracker signals read
+ * back the latest same-day entry, so this "just wins" without needing to
+ * delete anything first.
+ */
+async function setStressLevel(level: StressLevel): Promise<StressEntry> {
+  await simulateLatency(150);
+  return stressCheckInService.createEntry({ level });
 }
 
-if (!config.useMockServices) {
-  throw new AppError('homeService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
-}
+// Aggregates the other services (live when the real API is on); nothing backend-specific
+// to switch.
 
 export const homeService = { getWellbeingReflection, getTrackerSignals, setStressLevel };

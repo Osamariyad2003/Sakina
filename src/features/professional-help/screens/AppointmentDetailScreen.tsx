@@ -10,8 +10,8 @@ import { statusTone } from '../components/AppointmentCard';
 import { useAppointmentFormat } from '../components/useAppointmentFormat';
 import { useAppointmentQuery, useCancelAppointmentMutation } from '../state/useProfessionalQueries';
 import { getProfessional, sessionModeMeta } from '../models/professionalContent';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'AppointmentDetail'>;
 
@@ -37,7 +37,7 @@ export function AppointmentDetailScreen({ navigation, route }: Props) {
     return (
       <Screen>
         <ErrorState
-          message={(query.error as AppError)?.message ?? t('professionals.appointmentNotFound')}
+          message={query.error ? errorText(query.error, t) : t('professionals.appointmentNotFound')}
           onRetry={() => query.refetch()}
         />
       </Screen>
@@ -55,7 +55,7 @@ export function AppointmentDetailScreen({ navigation, route }: Props) {
         cancelSheet.current?.close();
         toast.show({ message: t('professionals.cancelled'), tone: 'success' });
       },
-      onError: (error) => toast.show({ message: (error as AppError).message, tone: 'error' }),
+      onError: (error) => toast.show({ message: errorText(error, t), tone: 'error' }),
     });
   };
 

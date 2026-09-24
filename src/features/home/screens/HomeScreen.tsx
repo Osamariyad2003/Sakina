@@ -9,11 +9,15 @@ import { Screen, AppText, Card, Button, TextField, Badge, EmptyState } from '../
 import { useTheme } from '../../../ui/theme';
 import { config } from '../../../config';
 import { useTodayMoodQuery } from '../../mood/state/useMoodQueries';
-import { GreetingHeader } from '../components/GreetingHeader';
+import { HomeHeaderPanel } from '../components/HomeHeaderPanel';
+import { CarouselDots } from '../components/CarouselDots';
 import { HomeSectionHeader } from '../components/HomeSectionHeader';
 import { MoodCheckInRow } from '../components/MoodCheckInRow';
 import { WellbeingReflectionCard } from '../components/WellbeingReflectionCard';
 import { MoodSummaryCard } from '../components/MoodSummaryCard';
+import { StressSummaryCard } from '../components/StressSummaryCard';
+import { SleepSummaryCard } from '../components/SleepSummaryCard';
+import { CombinedMetricsCard } from '../components/CombinedMetricsCard';
 import { TrackerRow } from '../components/TrackerRow';
 import { StressLevelRow } from '../components/StressLevelRow';
 import { useTrackerSignalsQuery, useWellbeingReflectionQuery } from '../state/useHomeQueries';
@@ -46,6 +50,7 @@ export function HomeScreen({ navigation }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [metricsPage, setMetricsPage] = React.useState(0);
 
   const todayMoodQuery = useTodayMoodQuery();
   const reflectionQuery = useWellbeingReflectionQuery();
@@ -74,212 +79,196 @@ export function HomeScreen({ navigation }: Props) {
   return (
     <Screen edges={['top']} padded={false}>
       <ScrollView
-        contentContainerStyle={{ padding: theme.spacing.md, gap: theme.spacing.md }}
+        contentContainerStyle={{ paddingBottom: theme.spacing.md, gap: theme.spacing.md }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-          <View style={{ flex: 1 }}>
-            <GreetingHeader />
-          </View>
-          {config.featureFlags.notifications ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={
-                unreadCount > 0 ? t('notifications.unreadLabel', { count: unreadCount }) : t('notifications.title')
-              }
-              onPress={() => navigation.navigate('Notifications')}
-              style={{
-                width: theme.sizes.touchTarget,
-                height: theme.sizes.touchTarget,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
-              {unreadCount > 0 ? (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 4,
-                    end: 4,
-                    minWidth: 16,
-                    height: 16,
-                    paddingHorizontal: 4,
-                    borderRadius: theme.radius.pill,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: theme.colors.status.error,
-                  }}
-                >
-                  <AppText variant="caption" color={theme.colors.text.onBrand}>
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </AppText>
-                </View>
-              ) : null}
-            </Pressable>
-          ) : null}
-        </View>
-
-        {/* Real search now — opens the global Search screen (features/search). */}
-        <Pressable
-          onPress={() => navigation.navigate('Search', undefined)}
-          accessibilityRole="search"
-          accessibilityLabel={t('home.searchPlaceholder')}
-        >
-          <View pointerEvents="none">
-            <TextField placeholder={t('home.searchPlaceholder')} editable={false} value="" />
-          </View>
-        </Pressable>
-
-        <ScrollView
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: theme.spacing.sm, paddingEnd: theme.spacing.md }}
-        >
-          <WellbeingReflectionCard />
-          <MoodSummaryCard />
-        </ScrollView>
-
-        <View style={{ gap: theme.spacing.sm }}>
-          {trackersQuery.data?.map((signal) =>
-            signal.key === 'stressLevel' ? (
-              <StressLevelRow key={signal.key} signal={signal} />
-            ) : (
-              <TrackerRow key={signal.key} signal={signal} />
-            ),
-          )}
-        </View>
-
-        <MoodCheckInRow
-          todayMood={todayMoodQuery.data?.mood ?? null}
-          onSelect={(mood) => navigation.navigate('MoodTab', { screen: 'MoodCheckIn', params: { initialMood: mood } })}
+        {/* Full-bleed: cancels the ScrollView's own padding so the panel
+            reaches the screen edges, the way the reference header does. */}
+        <HomeHeaderPanel
+          unreadCount={unreadCount}
+          showBell={config.featureFlags.notifications}
+          onOpenNotifications={() => navigation.navigate('Notifications')}
+          onOpenSearch={() => navigation.navigate('Search', undefined)}
         />
 
-        {/* Prominent, ≤2-tap safety entry — never buried (spec §21, business rules). */}
-        <Card
-          onPress={() => navigation.navigate('ProfileTab', { screen: 'Safety' })}
-          style={{ backgroundColor: theme.colors.status.error }}
-        >
-          <AppText variant="titleMd" color={theme.colors.text.onBrand}>
-            {t('safety.entryLabel')}
-          </AppText>
-        </Card>
+        <View style={{ paddingHorizontal: theme.spacing.md, gap: theme.spacing.md }}>
+          <View style={{ gap: theme.spacing.xs }}>
+            <HomeSectionHeader title={t('home.metricsSectionTitle')} />
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) => {
+                const width = e.nativeEvent.layoutMeasurement.width;
+                setMetricsPage(width > 0 ? Math.round(Math.abs(e.nativeEvent.contentOffset.x) / width) : 0);
+              }}
+              contentContainerStyle={{ gap: theme.spacing.sm, paddingEnd: theme.spacing.md }}
+            >
+              <WellbeingReflectionCard />
+              <MoodSummaryCard />
+              <StressSummaryCard />
+              <SleepSummaryCard />
+            </ScrollView>
+            <CarouselDots count={4} activeIndex={metricsPage} />
+          </View>
 
-        <Card onPress={() => navigation.navigate('CompanionTab', { screen: 'SymptomCheckerIntro' })}>
-          <AppText variant="titleMd">{t('checker.homeCardTitle')}</AppText>
-          <AppText variant="body" color={theme.colors.text.secondary}>
-            {t('checker.homeCardSubtitle')}
-          </AppText>
-        </Card>
+          {/* Feature 6 — combined glanceable view once Mood/Sleep/Stress all exist; additive, not a redesign. */}
+          <CombinedMetricsCard navigation={navigation} />
 
-        {config.featureFlags.professionalBooking ? (
           <View style={{ gap: theme.spacing.sm }}>
-            <HomeSectionHeader
-              title={t('professionals.homeSectionTitle')}
-              onSeeAll={() => navigation.navigate('Appointments')}
-            />
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment) => (
-                <AppointmentCard
-                  key={appointment.id}
-                  appointment={appointment}
-                  onPress={() => navigation.navigate('AppointmentDetail', { appointmentId: appointment.id })}
-                />
-              ))
-            ) : (
-              <Card onPress={() => navigation.navigate('TherapistDirectory')}>
-                <AppText variant="titleMd">{t('professionals.homeEmptyTitle')}</AppText>
-                <AppText variant="body" color={theme.colors.text.secondary}>
-                  {t('professionals.homeEmptyBody')}
-                </AppText>
-              </Card>
+            {trackersQuery.data?.map((signal) =>
+              signal.key === 'stressLevel' ? (
+                <StressLevelRow key={signal.key} signal={signal} />
+              ) : (
+                <TrackerRow key={signal.key} signal={signal} />
+              ),
             )}
           </View>
-        ) : null}
 
-        <Card onPress={() => navigation.navigate('CompanionTab', { screen: 'TherapyIntro' })}>
-          <AppText variant="titleMd">{t('therapy.homeCardTitle')}</AppText>
-          <AppText variant="body" color={theme.colors.text.secondary}>
-            {t('therapy.homeCardSubtitle')}
-          </AppText>
-        </Card>
-
-        <Card onPress={() => navigation.navigate('CompanionTab', { screen: 'Conversation' })}>
-          <AppText variant="titleMd">{t('tabs.companion')}</AppText>
-          <AppText variant="body" color={theme.colors.text.secondary}>
-            {t('companion.emptyBody')}
-          </AppText>
-        </Card>
-
-        <View style={{ gap: theme.spacing.sm }}>
-          <HomeSectionHeader
-            title={t('community.homeSectionTitle')}
-            onSeeAll={() => navigation.navigate('Community')}
+          <MoodCheckInRow
+            todayMood={todayMoodQuery.data?.mood ?? null}
+            onSelect={(mood) => navigation.navigate('MoodTab', { screen: 'MoodCheckIn', params: { initialMood: mood } })}
           />
-          <Card onPress={() => navigation.navigate('Community')}>
+
+          {/* "Recent insight" entry point (spec §13 Home listing) — the cross-domain Insights dashboard. */}
+          <Card onPress={() => navigation.navigate('Insights')}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-              <Ionicons name="people-outline" size={22} color={theme.colors.accent.stress} />
+              <Ionicons name="analytics-outline" size={22} color={theme.colors.accent.mood} />
               <View style={{ flex: 1 }}>
-                <AppText variant="titleMd">{t('community.homeCardTitle')}</AppText>
+                <AppText variant="titleMd">{t('home.insightsCardTitle')}</AppText>
                 <AppText variant="caption" color={theme.colors.text.secondary}>
-                  {t('community.homeCardSubtitle')}
+                  {t('home.insightsCardSubtitle')}
                 </AppText>
               </View>
             </View>
           </Card>
-        </View>
 
-        <View style={{ gap: theme.spacing.sm }}>
-          <HomeSectionHeader
-            title={t('resources.homeSectionTitle')}
-            onSeeAll={() => navigation.navigate('WellnessTab', { screen: 'WellnessResources' })}
-          />
-          {(articlesQuery.data ?? []).length === 0 ? (
-            <EmptyState title={t('resources.noArticlesTitle')} />
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: theme.spacing.sm, paddingEnd: theme.spacing.md }}
-            >
-              {(articlesQuery.data ?? []).slice(0, 5).map((article) => (
-                <ResourceCard
-                  key={article.id}
-                  article={article}
-                  compact
-                  onPress={() =>
-                    navigation.navigate('WellnessTab', { screen: 'ResourceDetail', params: { resourceId: article.id } })
-                  }
-                />
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
-          <Card style={{ flex: 1 }} onPress={() => navigation.navigate('JournalTab', { screen: 'JournalList' })}>
-            <AppText variant="titleMd">{t('tabs.journal')}</AppText>
+          {/* Prominent, ≤2-tap safety entry — never buried (spec §21, business rules). */}
+          <Card
+            onPress={() => navigation.navigate('ProfileTab', { screen: 'Safety' })}
+            style={{ backgroundColor: theme.colors.status.error }}
+          >
+            <AppText variant="titleMd" color={theme.colors.text.onBrand}>
+              {t('safety.entryLabel')}
+            </AppText>
           </Card>
-          <Card style={{ flex: 1 }} onPress={() => navigation.navigate('WellnessTab', { screen: 'StressOverview' })}>
-            <AppText variant="titleMd">{t('home.wellnessCardTitle')}</AppText>
-          </Card>
-        </View>
 
-        <Card onPress={() => navigation.navigate('ProfileTab', { screen: 'Badges' })}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-            <Ionicons name="ribbon-outline" size={22} color={theme.colors.accent.reflection} />
-            <View style={{ flex: 1 }}>
-              <AppText variant="titleMd">{t('badges.title')}</AppText>
-              <AppText variant="caption" color={theme.colors.text.secondary}>
-                {t('badges.homeCardSubtitle')}
-              </AppText>
+          <Card onPress={() => navigation.navigate('CompanionTab', { screen: 'SymptomCheckerIntro' })}>
+            <AppText variant="titleMd">{t('checker.homeCardTitle')}</AppText>
+            <AppText variant="body" color={theme.colors.text.secondary}>
+              {t('checker.homeCardSubtitle')}
+            </AppText>
+          </Card>
+
+          {config.featureFlags.professionalBooking ? (
+            <View style={{ gap: theme.spacing.sm }}>
+              <HomeSectionHeader
+                title={t('professionals.homeSectionTitle')}
+                onSeeAll={() => navigation.navigate('Appointments')}
+              />
+              {upcomingAppointments.length > 0 ? (
+                upcomingAppointments.map((appointment) => (
+                  <AppointmentCard
+                    key={appointment.id}
+                    appointment={appointment}
+                    onPress={() => navigation.navigate('AppointmentDetail', { appointmentId: appointment.id })}
+                  />
+                ))
+              ) : (
+                <Card onPress={() => navigation.navigate('TherapistDirectory')}>
+                  <AppText variant="titleMd">{t('professionals.homeEmptyTitle')}</AppText>
+                  <AppText variant="body" color={theme.colors.text.secondary}>
+                    {t('professionals.homeEmptyBody')}
+                  </AppText>
+                </Card>
+              )}
             </View>
-            <Badge label={t('home.seeAll')} />
-          </View>
-        </Card>
+          ) : null}
 
-        <Button label={t('home.refresh')} variant="ghost" onPress={onRefresh} />
+          <Card onPress={() => navigation.navigate('CompanionTab', { screen: 'TherapyIntro' })}>
+            <AppText variant="titleMd">{t('therapy.homeCardTitle')}</AppText>
+            <AppText variant="body" color={theme.colors.text.secondary}>
+              {t('therapy.homeCardSubtitle')}
+            </AppText>
+          </Card>
+
+          <Card onPress={() => navigation.navigate('CompanionTab', { screen: 'Conversation' })}>
+            <AppText variant="titleMd">{t('tabs.companion')}</AppText>
+            <AppText variant="body" color={theme.colors.text.secondary}>
+              {t('companion.emptyBody')}
+            </AppText>
+          </Card>
+
+          <View style={{ gap: theme.spacing.sm }}>
+            <HomeSectionHeader
+              title={t('community.homeSectionTitle')}
+              onSeeAll={() => navigation.navigate('Community')}
+            />
+            <Card onPress={() => navigation.navigate('Community')}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+                <Ionicons name="people-outline" size={22} color={theme.colors.accent.stress} />
+                <View style={{ flex: 1 }}>
+                  <AppText variant="titleMd">{t('community.homeCardTitle')}</AppText>
+                  <AppText variant="caption" color={theme.colors.text.secondary}>
+                    {t('community.homeCardSubtitle')}
+                  </AppText>
+                </View>
+              </View>
+            </Card>
+          </View>
+
+          <View style={{ gap: theme.spacing.sm }}>
+            <HomeSectionHeader
+              title={t('resources.homeSectionTitle')}
+              onSeeAll={() => navigation.navigate('WellnessTab', { screen: 'WellnessResources' })}
+            />
+            {(articlesQuery.data ?? []).length === 0 ? (
+              <EmptyState title={t('resources.noArticlesTitle')} />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: theme.spacing.sm, paddingEnd: theme.spacing.md }}
+              >
+                {(articlesQuery.data ?? []).slice(0, 5).map((article) => (
+                  <ResourceCard
+                    key={article.id}
+                    article={article}
+                    compact
+                    onPress={() =>
+                      navigation.navigate('WellnessTab', { screen: 'ResourceDetail', params: { resourceId: article.id } })
+                    }
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
+            <Card style={{ flex: 1 }} onPress={() => navigation.navigate('JournalTab', { screen: 'JournalList' })}>
+              <AppText variant="titleMd">{t('tabs.journal')}</AppText>
+            </Card>
+            <Card style={{ flex: 1 }} onPress={() => navigation.navigate('WellnessTab', { screen: 'StressOverview' })}>
+              <AppText variant="titleMd">{t('home.wellnessCardTitle')}</AppText>
+            </Card>
+          </View>
+
+          <Card onPress={() => navigation.navigate('ProfileTab', { screen: 'Badges' })}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <Ionicons name="ribbon-outline" size={22} color={theme.colors.accent.reflection} />
+              <View style={{ flex: 1 }}>
+                <AppText variant="titleMd">{t('badges.title')}</AppText>
+                <AppText variant="caption" color={theme.colors.text.secondary}>
+                  {t('badges.homeCardSubtitle')}
+                </AppText>
+              </View>
+              <Badge label={t('home.seeAll')} />
+            </View>
+          </Card>
+
+          <Button label={t('home.refresh')} variant="ghost" onPress={onRefresh} />
+        </View>
+
       </ScrollView>
     </Screen>
   );

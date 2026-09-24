@@ -3,14 +3,16 @@ import { View, AccessibilityInfo } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import { useKeepAwake } from 'expo-keep-awake';
-import { Screen, AppText, Button, EmptyState } from '../../../ui/primitives';
+import { Screen, AppText, Button, EmptyState, ContentImage } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { wellnessExercises } from '../models/wellnessContent';
+import { useContentImage } from '../state/useContentImages';
 import { BreathingVisualizer } from '../components/BreathingVisualizer';
 import { ExerciseInstructions } from '../components/ExerciseInstructions';
 import { ExerciseTimer } from '../components/ExerciseTimer';
 import { ProgressIndicator } from '../components/ProgressIndicator';
 import { CompletionState } from '../components/CompletionState';
+import { useCreateWellnessSessionMutation } from '../state/useWellnessSessionMutations';
 import type { WellnessStackParamList } from '../../../navigation/types';
 
 type Props = NativeStackScreenProps<WellnessStackParamList, 'ActiveExercise'>;
@@ -23,6 +25,8 @@ export function ActiveExerciseScreen({ navigation, route }: Props) {
   const theme = useTheme();
   const { t } = useTranslation();
   const exercise = wellnessExercises.find((e) => e.id === route.params.exerciseId);
+  const createSession = useCreateWellnessSessionMutation();
+  const curatedImage = useContentImage('wellness_exercise', route.params.exerciseId);
 
   const [phase, setPhase] = useState<Phase>('preparation');
   const [prepRemaining, setPrepRemaining] = useState(PREP_SECONDS);
@@ -63,6 +67,20 @@ export function ActiveExerciseScreen({ navigation, route }: Props) {
     return () => clearTimeout(timer);
   }, [phase, elapsed, exercise]);
 
+  // Feature 7 (Mindful Minutes): record the session as soon as this run reaches
+  // completion — whether by the timer running out or the user tapping "Finish"
+  // early. Keyed by `runToken` so a "Repeat" logs a second, separate session
+  // instead of re-firing for the same run. Best-effort: a failed write
+  // shouldn't block the user from seeing their completion screen.
+  const loggedRunToken = useRef<number | null>(null);
+  const createSessionMutate = createSession.mutate;
+  useEffect(() => {
+    if (phase !== 'completion' || !exercise) return;
+    if (loggedRunToken.current === runToken) return;
+    loggedRunToken.current = runToken;
+    createSessionMutate({ exerciseId: exercise.id, category: exercise.category, durationSeconds: Math.min(elapsed, exercise.durationSeconds) });
+  }, [phase, runToken, exercise, elapsed, createSessionMutate]);
+
   if (!exercise) {
     return (
       <Screen>
@@ -84,6 +102,16 @@ export function ActiveExerciseScreen({ navigation, route }: Props) {
   return (
     <Screen>
       <View style={{ flex: 1, paddingTop: theme.spacing.lg }}>
+        {/* Stays put across preparation/active/completion so the screen doesn't
+            reflow under the user mid-exercise. Kept short in the active phase:
+            the visualizer, not the photo, is what they're following. */}
+        {curatedImage ?? exercise.image ? (
+          <ContentImage
+            image={curatedImage ?? exercise.image}
+            height={phase === 'active' ? 120 : 200}
+            style={{ marginBottom: theme.spacing.md }}
+          />
+        ) : null}
         {phase === 'preparation' ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md }}>
             <AppText variant="displayMd">{t('wellness.getReady')}</AppText>

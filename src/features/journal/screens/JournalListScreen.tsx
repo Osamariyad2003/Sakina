@@ -8,9 +8,9 @@ import { useTheme } from '../../../ui/theme';
 import { useJournalListQuery } from '../state/useJournalQueries';
 import { JournalCard } from '../components/JournalCard';
 import { DateHeader } from '../components/DateHeader';
-import type { AppError } from '../../../core/errors';
 import type { JournalEntry } from '../../../types/models';
 import type { JournalStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<JournalStackParamList, 'JournalList'>;
 
@@ -58,7 +58,7 @@ export function JournalListScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : items.length === 0 ? (
           isSearching ? (
             <EmptyState title={t('journal.noSearchResultsTitle')} description={t('journal.noSearchResultsBody')} />

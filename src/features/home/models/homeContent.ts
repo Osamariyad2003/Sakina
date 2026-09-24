@@ -1,3 +1,5 @@
+import type { StressLevel } from '../../../types/models';
+
 export type MoodTrend = 'up' | 'down' | 'flat' | 'notEnoughData';
 
 export interface WellbeingReflection {
@@ -33,8 +35,11 @@ export const trackerMeta: Record<
  * Level (segmented meter)" tracker, reframed per this feature's rule 3
  * ("user-set, not measured"). The user picks one of these three plain
  * levels themselves; nothing in the app ever sets this automatically.
+ * `StressLevel` itself now lives in types/models.ts (shared with the full
+ * Stress check-in/history feature — features/wellness/stress-management);
+ * re-exported here so this row's existing imports keep working unchanged.
  */
-export type StressLevel = 'low' | 'medium' | 'high';
+export type { StressLevel };
 
 export interface StressLevelOption {
   level: StressLevel;

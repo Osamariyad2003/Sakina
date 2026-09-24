@@ -7,6 +7,7 @@ import { useTheme } from '../../../ui/theme';
 import { useAppointmentFormat } from './useAppointmentFormat';
 import type { AvailabilitySlot } from '../models/professionalContent';
 import type { AppError } from '../../../core/errors';
+import { errorText } from '../../../core/errors';
 
 interface SlotPickerProps {
   slots: AvailabilitySlot[] | undefined;
@@ -27,7 +28,7 @@ export function SlotPicker({ slots, isLoading, error, onRetry, selected, onSelec
   const { formatTime } = useAppointmentFormat();
 
   if (isLoading) return <SkeletonList rows={3} />;
-  if (error) return <ErrorState message={error.message} onRetry={onRetry} />;
+  if (error) return <ErrorState message={errorText(error, t)} onRetry={onRetry} />;
   if (!slots || slots.every((s) => !s.available)) {
     return <EmptyState title={t('professionals.noSlotsTitle')} description={t('professionals.noSlotsBody')} />;
   }

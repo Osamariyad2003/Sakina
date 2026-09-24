@@ -7,11 +7,12 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { useTranslation } from 'react-i18next';
 import { Screen, AppText, Card, Button, SkeletonList, ErrorState, EmptyState } from '../../../../ui/primitives';
 import { useTheme } from '../../../../ui/theme';
+import { AnimatedLottie } from '../../../../ui/lottie';
 import { useStressTechniquesQuery } from '../state/useStressQueries';
 import { quickReliefTechniqueId } from '../models/stressContent';
 import { ExerciseCard } from '../../components/ExerciseCard';
-import type { AppError } from '../../../../core/errors';
 import type { WellnessStackParamList, AppTabsParamList } from '../../../../navigation/types';
+import { errorText } from '../../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<WellnessStackParamList, 'StressOverview'>,
@@ -45,21 +46,44 @@ export function StressOverviewScreen({ navigation }: Props) {
 
         <Card
           onPress={() => navigation.navigate('StressActiveSession', { techniqueId: quickReliefTechniqueId })}
-          style={{ backgroundColor: theme.colors.brand.primary }}
+          style={{ backgroundColor: theme.colors.brand.primary, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}
         >
-          <AppText variant="titleMd" color={theme.colors.text.onBrand}>
-            {t('stressManagement.quickReliefTitle')}
-          </AppText>
-          <AppText variant="caption" color={theme.colors.text.onBrand} style={{ marginTop: theme.spacing.xxs }}>
-            {t('stressManagement.quickReliefCta')}
-          </AppText>
+          {/* Decorative — never phase-synced to a real breathing pattern (that precision lives in BreathingVisualizer's Reanimated pulse); just a quiet loop suggesting "breathe" on this shortcut. */}
+          <AnimatedLottie
+            source={require('../../../../../assets/lottie/breathe.json')}
+            style={{ width: 48, height: 48 }}
+            fallback={<AppText style={{ fontSize: 32 }}>🌬️</AppText>}
+          />
+          <View style={{ flex: 1 }}>
+            <AppText variant="titleMd" color={theme.colors.text.onBrand}>
+              {t('stressManagement.quickReliefTitle')}
+            </AppText>
+            <AppText variant="caption" color={theme.colors.text.onBrand} style={{ marginTop: theme.spacing.xxs }}>
+              {t('stressManagement.quickReliefCta')}
+            </AppText>
+          </View>
         </Card>
+
+        <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
+          <Button
+            label={t('stressManagement.logStressCta')}
+            variant="secondary"
+            style={{ flex: 1 }}
+            onPress={() => navigation.navigate('StressCheckIn')}
+          />
+          <Button
+            label={t('stressManagement.viewHistoryCta')}
+            variant="ghost"
+            style={{ flex: 1 }}
+            onPress={() => navigation.navigate('StressHistory')}
+          />
+        </View>
 
         <View style={{ flex: 1 }}>
           {query.isLoading ? (
             <SkeletonList rows={4} />
           ) : query.isError ? (
-            <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+            <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
           ) : (query.data ?? []).length === 0 ? (
             <EmptyState title={t('stressManagement.emptyTitle')} description={t('stressManagement.emptyBody')} />
           ) : (

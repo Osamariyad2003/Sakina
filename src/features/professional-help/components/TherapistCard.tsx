@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Card, AppText, Avatar, Badge } from '../../../ui/primitives';
+import { Card, AppText, Avatar, Badge, resolveImageUri } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { getSpecialty, sessionModeMeta } from '../models/professionalContent';
 import type { Professional } from '../../../types/models';
@@ -31,7 +31,7 @@ export function TherapistCard({ professional, onPress }: TherapistCardProps) {
   return (
     <Card onPress={onPress} style={{ gap: theme.spacing.xs }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
-        <Avatar uri={professional.photoUrl} initials={professional.fullName} size={52} />
+        <Avatar uri={resolveImageUri(professional.image, true)} initials={professional.fullName} size={52} />
         <View style={{ flex: 1 }}>
           <AppText variant="titleMd">{professional.fullName}</AppText>
           <AppText variant="caption" color={theme.colors.text.secondary}>

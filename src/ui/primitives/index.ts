@@ -18,3 +18,4 @@ export { Skeleton, SkeletonList } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 export { LoadingState } from './LoadingState';
+export { ContentImage, resolveImageUri, type ContentImageData } from './ContentImage';

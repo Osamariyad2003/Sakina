@@ -8,8 +8,8 @@ import { moodColor } from '../components/moodColors';
 import { useMoodHistoryQuery } from '../state/useMoodQueries';
 import { moodLevels, moodSuggestions, moodLevelWeight } from '../models/moodContent';
 import type { MoodLevel, MoodEntry } from '../../../types/models';
-import type { AppError } from '../../../core/errors';
 import type { MoodStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<MoodStackParamList, 'MoodInsights'>;
 
@@ -64,7 +64,7 @@ export function MoodInsightsScreen({ navigation }: Props) {
         {historyQuery.isLoading ? (
           <SkeletonList rows={5} />
         ) : historyQuery.isError ? (
-          <ErrorState message={(historyQuery.error as AppError).message} onRetry={() => historyQuery.refetch()} />
+          <ErrorState message={errorText(historyQuery.error, t)} onRetry={() => historyQuery.refetch()} />
         ) : entries.length === 0 ? (
           <EmptyState title={t('mood.insightsEmptyTitle')} description={t('mood.insightsEmptyBody')} />
         ) : (

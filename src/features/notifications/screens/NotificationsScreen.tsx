@@ -15,8 +15,8 @@ import {
   useClearNotificationsMutation,
 } from '../state/useNotificationQueries';
 import type { NotificationTarget } from '../models/notificationContent';
-import type { AppError } from '../../../core/errors';
 import type { HomeStackParamList, AppTabsParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<HomeStackParamList, 'Notifications'>,
@@ -95,7 +95,7 @@ export function NotificationsScreen({ navigation }: Props) {
         {query.isLoading ? (
           <SkeletonList rows={4} />
         ) : query.isError ? (
-          <ErrorState message={(query.error as AppError).message} onRetry={() => query.refetch()} />
+          <ErrorState message={errorText(query.error, t)} onRetry={() => query.refetch()} />
         ) : notifications.length === 0 ? (
           <EmptyState
             title={t('notifications.emptyTitle')}

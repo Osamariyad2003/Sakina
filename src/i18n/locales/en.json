@@ -1,5 +1,6 @@
 {
   "common": {
+    "photoCredit": "Photo: {{name}}",
     "next": "Next",
     "back": "Back",
     "cancel": "Cancel",
@@ -8,6 +9,7 @@
     "loading": "Loading...",
     "skip": "Skip",
     "done": "Done",
+    "continue": "Continue",
     "showPassword": "Show password",
     "hidePassword": "Hide password"
   },
@@ -20,6 +22,7 @@
     "profile": "Profile"
   },
   "home": {
+    "metricsSectionTitle": "Mental health metrics",
     "greetingMorning": "Good morning",
     "checkInPrompt": "How are you feeling today?",
     "checkInSubtitle": "Take a moment and tell us how you feel.",
@@ -30,6 +33,16 @@
     "searchPlaceholder": "Search your journal...",
     "reflectionCardTitle": "Your wellbeing reflection",
     "moodSummaryCardTitle": "Mood, last 7 days",
+    "stressSummaryCardTitle": "Stress, last 7 days",
+    "sleepSummaryCardTitle": "Sleep, last 7 nights",
+    "combinedMetricsTitle": "Mood, sleep & stress",
+    "combinedMoodLabel": "Mood today",
+    "combinedSleepLabel": "Sleep avg",
+    "combinedSleepHours": "{{hours}}h",
+    "combinedSleepCaption": "last 7 nights",
+    "combinedStressLabel": "Stress today",
+    "combinedNoDataYet": "Not logged yet",
+    "combinedCorrelationSleepStress": "Your stress tends to be higher on nights you slept less.",
     "journalingDaysChip": "Journaled {{count}} days",
     "stressSessionsChip": "{{count}} calming sessions",
     "streakChip": "{{count}}-day streak",
@@ -47,9 +60,27 @@
       "stressLevelPrompt": "How would you describe your stress level right now? You set this yourself — nothing is measured automatically."
     },
     "seeAll": "See all",
-    "checkInLoggedTitle": "Logged today: {{mood}}"
+    "checkInLoggedTitle": "Logged today: {{mood}}",
+    "insightsCardTitle": "Your insights",
+    "insightsCardSubtitle": "See your mood trends and patterns"
   },
   "companion": {
+    "personalizeTitle": "Personalised replies",
+    "personalizeBody": "Lets the companion use a short summary of your own recent moods, sleep, stress, water and goals so its replies fit you better. Your journal text is never shared. Off by default, and you can turn it off any time.",
+    "actions": {
+      "breathing": "Try a breathing exercise",
+      "grounding": "Try a grounding exercise",
+      "journal": "Write about it",
+      "mood_checkin": "Check in on your mood",
+      "symptom_checker": "Explore symptoms",
+      "sleep": "Help with sleep",
+      "professionals": "Talk to a professional",
+      "safety": "Safety & support"
+    },
+    "clearHistory": "Clear chat",
+    "clearConfirmTitle": "Clear this conversation?",
+    "clearConfirmMessage": "This removes the chat from your device and starts a fresh conversation. Earlier messages stay on the server until you use Privacy → Clear my data.",
+    "clearConfirmCta": "Clear",
     "suggestedPrompt1": "I'm feeling stressed today",
     "suggestedPrompt2": "I want to talk about something bothering me",
     "suggestedPrompt3": "Help me understand what I'm feeling",
@@ -67,7 +98,26 @@
     "riskBannerCta": "Open support page",
     "stressSuggestionTitle": "Feeling under pressure?",
     "stressSuggestionBody": "You could try a short stress-relief technique — it only takes a couple of minutes.",
-    "stressSuggestionCta": "Open Stress Management"
+    "stressSuggestionCta": "Open Stress Management",
+    "voice": {
+      "micIdleLabel": "Talk to the companion",
+      "micListeningLabel": "Listening... tap to stop",
+      "micReflectingLabel": "Companion is thinking",
+      "micSpeakingLabel": "Companion is speaking... tap to stop",
+      "listeningHint": "Listening...",
+      "reflectingHint": "One moment...",
+      "speakingHint": "Companion is speaking",
+      "transcriptPlaceholder": "What you say will appear here",
+      "permissionDenied": "We need microphone access so you can talk to the companion.",
+      "unavailable": "Voice isn't available right now. Try typing your message.",
+      "error": "Something went wrong with voice. Please try again."
+    },
+    "crisis": {
+      "recededTitle": "Let's focus on immediate support",
+      "recededBody": "We've opened the Safety & Emergency page for you. The companion will wait here — come back whenever you're ready.",
+      "reachHumanCta": "Reach a human",
+      "returnCta": "I'm back, let's continue"
+    }
   },
   "checker": {
     "homeCardTitle": "AI Symptom Checker",
@@ -415,8 +465,38 @@
     }
   },
   "insights": {
-    "supportiveExampleTitle": "It looks like the past few days have been a bit harder.",
-    "supportiveExampleBody": "Let's see what might help."
+    "title": "Your insights",
+    "subtitle": "Patterns from your mood check-ins and journal, always in your corner — never a judgment.",
+    "emptyTitle": "No insights yet",
+    "emptyBody": "Check in with your mood a few times and your patterns will start showing up here.",
+    "trendTitle": "Mood trend, last 7 days",
+    "weeklyChangeTitle": "This week",
+    "statCheckIns": "Check-ins",
+    "statVsLastWeek": "vs last week",
+    "statImprovement": "Improvement",
+    "frequentEmotionsTitle": "Frequent emotions",
+    "frequentEmotionsEmpty": "Log a few more check-ins to see your frequent emotions.",
+    "commonTriggersTitle": "Common triggers",
+    "commonTriggersEmpty": "Add a reason on your check-ins to see your common triggers.",
+    "positivePatternsTitle": "Positive patterns",
+    "patternStreak": "{{count}}-day check-in streak — keep it up.",
+    "patternBestDay": "You tend to feel your best on {{day}}s.",
+    "patternTopEmotion": "\"{{emotion}}\" showed up the most this week.",
+    "patternJournaling": "You've journaled {{count}} times this week — nice reflection habit.",
+    "suggestionLabel": "Personalized suggestion",
+    "suggestionCta": "Learn more",
+    "journalSnapshotTitle": "Journaling",
+    "journalSnapshotBody": "{{count}} entries this week · {{total}} total",
+    "wellnessCta": "Try a calming exercise",
+    "weekday": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    }
   },
   "auth": {
     "welcomeTitle": "Sakina",
@@ -441,6 +521,7 @@
     "createOne": "Create one",
     "forgotPasswordLink": "Forgot password?",
     "resetLinkSentTitle": "Link sent",
+    "resetLinkSentBodyLive": "If an account exists for this email, we've sent a link to reset your password. Check your inbox.",
     "resetLinkSentBody": "Open the link to finish resetting your password. (Demo build: taking you there directly.)",
     "resetSuccessTitle": "Password updated",
     "resetSuccessBody": "You can now log in with your new password.",
@@ -457,6 +538,7 @@
   },
   "errors": {
     "network": "Couldn't connect to the internet. Check your connection and try again.",
+    "rateLimited": "Too many attempts. Please wait a moment and try again.",
     "sessionExpired": "Your session has expired. Please log in again.",
     "validation": "Please check the information you entered.",
     "server": "Something went wrong on our end. Try again shortly.",
@@ -497,7 +579,11 @@
     "finish": "Finish",
     "completionTitle": "Exercise complete 🌿",
     "completionBody": "You took a small step for yourself today. How do you feel now?",
-    "repeat": "Repeat exercise"
+    "repeat": "Repeat exercise",
+    "mindfulMinutesTitle": "Mindful minutes",
+    "mindfulMinutesValue": "{{count}} min from meditation, breathing & relaxation",
+    "mindfulStreakValue": "{{count}}-day streak",
+    "mindfulStreakEmpty": "Practice today to start a streak"
   },
   "hydration": {
     "title": "Hydration",
@@ -664,7 +750,40 @@
     "moodCheckInPrompt": "How do you feel now, after the exercise?",
     "openJournalCta": "Open journal",
     "highStressNudgeTitle": "Still feeling a lot of pressure?",
-    "highStressNudgeBody": "That's okay — support is always available whenever you need it."
+    "highStressNudgeBody": "That's okay — support is always available whenever you need it.",
+    "logStressCta": "Log your stress",
+    "viewHistoryCta": "Stress history"
+  },
+  "stressCheckIn": {
+    "levelTitle": "How stressed do you feel right now?",
+    "levelLow": "Low",
+    "levelMedium": "Medium",
+    "levelHigh": "High",
+    "triggerQuestion": "What's the reason, if any?",
+    "optionalHint": "Optional — you can pick more than one.",
+    "noteQuestion": "Want to add anything?",
+    "notePlaceholder": "Write anything you'd like to note... (optional)",
+    "saveCta": "Log stress",
+    "savedTitle": "Your stress check-in was saved",
+    "savedBody": "Thanks for taking a moment to check in with yourself.",
+    "greatThanks": "Great, thanks!",
+    "historyTitle": "Stress history",
+    "trendTitle": "Stress trend, last 7 days",
+    "recentTitle": "Recent check-ins",
+    "emptyTitle": "No stress check-ins yet",
+    "emptyBody": "Log how stressed you're feeling to start seeing your patterns.",
+    "newCheckIn": "Log stress",
+    "totalCheckIns": "{{count}} stress check-ins so far.",
+    "detailTitle": "Stress check-in",
+    "notFound": "We couldn't find this check-in",
+    "deleteFromHistory": "Delete from history",
+    "suggestedNextStep": "Suggested next step",
+    "openSuggestion": "See suggestion",
+    "suggestionLabel": "Suggested for you",
+    "suggestionCta": "Try this exercise",
+    "suggestionNotFound": "We couldn't find this suggestion",
+    "minutesMetric": "Minutes",
+    "overviewSectionTitle": "Overview"
   },
   "onboarding": {
     "introTitle": "You're not alone in this",
@@ -674,7 +793,15 @@
     "consentTitle": "Your privacy comes first",
     "consentBody": "Your data is yours alone — your mood, journal, and conversations with the companion aren't shared with anyone else. Let's agree before we start recording anything about how you feel.",
     "consentAgree": "I agree to the privacy policy",
-    "consentCta": "Let's begin"
+    "consentCta": "Let's begin",
+    "stepIndicator": "Step {{current}} of {{total}}",
+    "skipAssessmentCta": "Skip for now",
+    "skipAssessmentConfirmTitle": "Skip the assessment?",
+    "skipAssessmentConfirmBody": "You can always answer these later from your profile. Nothing you've already answered will be lost.",
+    "summaryTitle": "Thanks for sharing",
+    "summaryBody": "Here's a small starting point based on what you told us — nothing here is a diagnosis, just a gentle suggestion.",
+    "summarySuggestionLabel": "A good place to start",
+    "summaryMoodSeeded": "We've logged today's mood for you based on your answers — you can always edit or delete it from Mood."
   },
   "profile": {
     "title": "My account",

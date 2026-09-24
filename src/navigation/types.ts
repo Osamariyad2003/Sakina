@@ -8,6 +8,8 @@ export type OnboardingStackParamList = {
   Introduction: undefined;
   Goals: undefined;
   Baseline: undefined;
+  /** Results/summary after the Mental Health Assessment (features/onboarding) — skipped entirely if the user skips Baseline. */
+  AssessmentSummary: undefined;
   Consent: undefined;
 };
 
@@ -38,6 +40,8 @@ export type HomeStackParamList = {
   CommunityGroup: { groupId: string };
   CommunityThread: { threadId: string };
   NewCommunityThread: { groupId: string };
+  /** Cross-domain Insights dashboard (features/insights) — reads Mood + Journal data. */
+  Insights: undefined;
   /** Utility route for content that no longer resolves (features/errors). */
   NotFound: { entity?: string } | undefined;
 };
@@ -90,6 +94,11 @@ export type WellnessStackParamList = {
   StressTechniqueDetail: { techniqueId: string };
   StressActiveSession: { techniqueId: string };
   StressCompletion: { techniqueId: string; sessionId?: string };
+  // Stress check-in tracking — level/trigger/note history, mirrors Mood (features/wellness/stress-management).
+  StressCheckIn: undefined;
+  StressHistory: undefined;
+  StressDetail: { entryId: string };
+  StressSuggestionDetail: { suggestionId: string };
   // Hydration tracker (features/wellness/hydration).
   HydrationHome: undefined;
   HydrationLog: undefined;

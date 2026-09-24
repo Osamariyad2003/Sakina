@@ -1,111 +1,74 @@
-import { storage, storageKeys } from '../../../core/storage/mmkv';
-import { config } from '../../../config';
-import { AppError } from '../../../core/errors';
-import type { MoodEntry, MoodMetrics } from '../../../types/models';
-import { moodLevelWeight } from '../models/moodContent';
+import type { MoodEntry } from '../../../types/models';
+import { buildMoodTrend, isSameDay, type TrendPoint } from '../models/moodTrend';
+import type { CreateMoodEntryInput, MoodRepository } from './moodRepository';
 
 /**
- * [ASSUMPTION] No backend exists yet (product-definition.md Open Question
- * #4) — persists to MMKV so check-ins survive app restarts during
- * development. Swap for real `apiClient` calls once a backend exists; the
- * exported function signatures are the contract the rest of the app
- * depends on.
+ * Mood use cases, composed over a `MoodRepository`.
+ *
+ * What changed, and why (docs/architecture-review.md §2.3, §6.1):
+ * - transport and persistence moved to `httpMoodRepository` /
+ *   `localMoodRepository`, which both satisfy one interface;
+ * - the trend rule moved to `models/moodTrend.ts`, where it is a pure
+ *   function with its own tests;
+ * - this module now only orchestrates — fetch what is needed, apply the rule,
+ *   return the result.
+ *
+ * This module imports no implementation at all: `core/composition.ts` wires
+ * one in at startup, and a test injects a fake. That is what keeps these use
+ * cases runnable without axios, MMKV or React Native.
  */
 
-function readEntries(): MoodEntry[] {
-  return storage.getJSON<MoodEntry[]>(storageKeys.mockMoodEntries) ?? [];
+let repository: MoodRepository | null = null;
+
+/** Wires an implementation. Returns a restore function, so tests can undo it. */
+export function setMoodRepository(next: MoodRepository): () => void {
+  const previous = repository;
+  repository = next;
+  return () => {
+    repository = previous;
+  };
 }
 
-function writeEntries(entries: MoodEntry[]) {
-  storage.setJSON(storageKeys.mockMoodEntries, entries);
-}
-
-function fakeDelay(ms = 350) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function isSameDay(isoA: string, isoB: string) {
-  return isoA.slice(0, 10) === isoB.slice(0, 10);
-}
-
-export interface CreateMoodEntryInput {
-  mood: MoodEntry['mood'];
-  emotionIds: string[];
-  triggerIds: string[];
-  note?: string;
-  companionIds?: string[];
-  locationLabel?: string;
-  metrics?: MoodMetrics;
-}
-
-export interface TrendPoint {
-  date: string; // YYYY-MM-DD
-  averageWeight: number | null; // null = no entries that day
+function activeRepository(): MoodRepository {
+  if (!repository) {
+    // Loud on purpose: a missing wire-up is a programming error at startup,
+    // not something to paper over with a silent empty result.
+    throw new Error('Mood repository has not been wired — call composeRepositories() at startup.');
+  }
+  return repository;
 }
 
 async function listEntries(): Promise<MoodEntry[]> {
-  await fakeDelay();
-  return [...readEntries()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return activeRepository().list();
 }
 
 async function getTodayEntry(): Promise<MoodEntry | null> {
-  await fakeDelay(150);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
   const nowIso = new Date().toISOString();
-  const entries = readEntries();
-  return entries.find((e) => isSameDay(e.createdAt, nowIso)) ?? null;
-}
-
-async function createEntry(input: CreateMoodEntryInput): Promise<MoodEntry> {
-  await fakeDelay();
-  const entry: MoodEntry = {
-    id: `mood-${Date.now()}`,
-    mood: input.mood,
-    emotionIds: input.emotionIds,
-    triggerIds: input.triggerIds,
-    note: input.note,
-    companionIds: input.companionIds ?? [],
-    locationLabel: input.locationLabel,
-    metrics: input.metrics,
-    createdAt: new Date().toISOString(),
-  };
-  writeEntries([entry, ...readEntries()]);
-  return entry;
+  const entries = await activeRepository().list(startOfToday);
+  return entries.find((entry) => isSameDay(entry.createdAt, nowIso)) ?? null;
 }
 
 async function getEntry(id: string): Promise<MoodEntry | null> {
-  await fakeDelay(120);
-  return readEntries().find((e) => e.id === id) ?? null;
+  return activeRepository().findById(id);
+}
+
+async function createEntry(input: CreateMoodEntryInput): Promise<MoodEntry> {
+  return activeRepository().create(input);
 }
 
 async function deleteEntry(id: string): Promise<void> {
-  await fakeDelay(150);
-  writeEntries(readEntries().filter((e) => e.id !== id));
+  return activeRepository().delete(id);
 }
 
-/** Last N days' average mood weight, oldest first — used by MoodChart (RTL-aware rendering happens in the component). */
+/** Last N days' average mood weight, oldest first — RTL-aware rendering happens in the component. */
 async function getTrend(days: number): Promise<TrendPoint[]> {
-  await fakeDelay(200);
-  const entries = readEntries();
-  const points: TrendPoint[] = [];
-
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    const key = date.toISOString().slice(0, 10);
-    const dayEntries = entries.filter((e) => e.createdAt.slice(0, 10) === key);
-    const averageWeight = dayEntries.length
-      ? dayEntries.reduce((sum, e) => sum + moodLevelWeight[e.mood], 0) / dayEntries.length
-      : null;
-    points.push({ date: key, averageWeight });
-  }
-
-  return points;
-}
-
-// Same pattern as authService: a loud failure if the mock flag is flipped
-// without a real implementation wired up yet, rather than a silent no-op.
-if (!config.useMockServices) {
-  throw new AppError('moodService: config.useMockServices=false but no real implementation is wired up yet.', 'unknown');
+  const start = new Date();
+  start.setDate(start.getDate() - (days - 1));
+  start.setHours(0, 0, 0, 0);
+  const entries = await activeRepository().list(start);
+  return buildMoodTrend(entries, days);
 }
 
 export const moodService = {
@@ -116,3 +79,6 @@ export const moodService = {
   deleteEntry,
   getTrend,
 };
+
+export type { CreateMoodEntryInput } from './moodRepository';
+export type { TrendPoint } from '../models/moodTrend';

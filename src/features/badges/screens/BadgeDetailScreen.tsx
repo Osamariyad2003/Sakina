@@ -6,8 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Screen, AppText, Card, Badge, LoadingState, ErrorState } from '../../../ui/primitives';
 import { useTheme } from '../../../ui/theme';
 import { useBadgeQuery } from '../state/useBadgeQueries';
-import type { AppError } from '../../../core/errors';
 import type { ProfileStackParamList } from '../../../navigation/types';
+import { errorText } from '../../../core/errors';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'BadgeDetail'>;
 
@@ -21,7 +21,7 @@ export function BadgeDetailScreen({ route }: Props) {
   if (query.isError || !query.data) {
     return (
       <Screen>
-        <ErrorState message={(query.error as AppError)?.message ?? t('badges.notFound')} onRetry={() => query.refetch()} />
+        <ErrorState message={errorText(query.error, t) ?? t('badges.notFound')} onRetry={() => query.refetch()} />
       </Screen>
     );
   }
